@@ -1,0 +1,8 @@
+POST http://localhost:5063/api/inventory
+Content-Type: application/json
+
+{
+  "name": "Black T-shirt",
+  "quantity": 3,
+  "location": "Warehouse Sector A"
+}

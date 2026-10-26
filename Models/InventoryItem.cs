@@ -4,6 +4,7 @@ namespace TabulaWMS.Models
     {
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
+        public string SKU { get; set; } = string.Empty;
         public int Quantity { get; set; }
         public string Location { get; set; } = string.Empty;
 

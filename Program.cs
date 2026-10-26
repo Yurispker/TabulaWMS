@@ -4,12 +4,14 @@ using TabulaWMS.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddControllers();
+
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
 builder.Services.AddDbContext<TabulaContext>(options =>
-    options.UseSqlite("Data Source=app.db"));
+    options.UseSqlite("Data Source=Data/app.db"));
 
 var app = builder.Build();
 
@@ -21,6 +23,6 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.MapGet("/api/test", () => "TabulaWMS backend is live!");
+app.MapControllers();
 
 app.Run();
