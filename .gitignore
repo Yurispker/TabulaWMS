@@ -13,3 +13,8 @@ obj/
 .vs/
 .vscode/
 .DS_Store
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
