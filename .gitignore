@@ -1,0 +1,15 @@
+# .NET Build output folders
+bin/
+obj/
+[Bb]in/
+[Oo]bj/
+
+# Environment and local config files
+.env
+*.user
+*.suo
+
+# IDE specific files (VS Code / Visual Studio)
+.vs/
+.vscode/
+.DS_Store

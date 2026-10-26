@@ -1,0 +1,6 @@
+@TabulaWMS_HostAddress = http://localhost:5063
+
+GET {{TabulaWMS_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
