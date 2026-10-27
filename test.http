@@ -4,5 +4,6 @@ Content-Type: application/json
 {
   "name": "Black T-shirt",
   "quantity": 3,
+  "sku": "TSHIRT-BLK-001",
   "location": "Warehouse Sector A"
 }

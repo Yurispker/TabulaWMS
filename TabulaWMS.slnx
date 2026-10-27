@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TabulaWMS/TabulaWMS.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TabulaWMS.tests/TabulaWMS.tests.csproj" />
+  </Folder>
+</Solution>
