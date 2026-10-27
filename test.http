@@ -1,4 +1,4 @@
-POST http://localhost:5063/api/inventory
+POST http://localhost:5063/api/products
 Content-Type: application/json
 
 {

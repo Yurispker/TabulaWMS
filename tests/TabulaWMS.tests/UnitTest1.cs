@@ -7,13 +7,13 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace TabulaWMS.tests;
 
-public class InventoryControllerTests
+public class ProductsControllerTests
 {
     private TabulaContext GetInMemoryDbContext()
     {
         var options = new DbContextOptionsBuilder<TabulaContext>()
-        .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
-        .Options;
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .Options;
 
         var context = new TabulaContext(options);
         context.Database.EnsureCreated();
@@ -21,55 +21,54 @@ public class InventoryControllerTests
     }
 
     [Fact]
-    public async Task AddInventoryItem_ReturnsCreatedAtActionResult()
+    public async Task UpsertProduct_NewItem_ReturnsCreatedAtActionResult()
     {
         // Arrange
         var context = GetInMemoryDbContext();
-        var controller = new InventoryController(context);
-        var newItem = new InventoryItem
+        var controller = new ProductController(context);
+
+        var newDto = new ProductUpsertDto
         {
             Name = "Test Item",
             Quantity = 3,
             SKU = "Test001",
-            Location = "Warehouse Sector A"
+            Description = "A test product"
         };
 
         // Act
-        var result = await controller.CreateItem(newItem);
+        var result = await controller.UpsertProduct(newDto);
 
         // Assert
         var createdAtActionResult = Assert.IsType<CreatedAtActionResult>(result);
-        var returnValue = Assert.IsType<InventoryItem>(createdAtActionResult.Value);
-        Assert.Equal(newItem.Name, returnValue.Name);
-        Assert.Equal(newItem.Quantity, returnValue.Quantity);
-        Assert.Equal(newItem.SKU, returnValue.SKU);
-        Assert.Equal(newItem.Location, returnValue.Location);
+        var returnValue = Assert.IsType<Product>(createdAtActionResult.Value);
+        Assert.Equal(newDto.Name, returnValue.Name);
+        Assert.Equal(newDto.Quantity, returnValue.Quantity);
+        Assert.Equal(newDto.SKU, returnValue.SKU);
 
-        var dbItem = await context.InventoryItems.FirstOrDefaultAsync(i => i.SKU == "Test001");
+        var dbItem = await context.Products.FirstOrDefaultAsync(i => i.SKU == "Test001");
         Assert.NotNull(dbItem);
         Assert.Equal(3, dbItem.Quantity);
     }
 
     [Fact]
-    public async Task CreateItem_NegativeQuantity_ReturnsBadRequest()
+    public async Task UpsertProduct_NegativeQuantity_ReturnsBadRequest()
     {
         // Arrange
         using var context = GetInMemoryDbContext();
-        var controller = new InventoryController(context);
+        var controller = new ProductController(context);
 
-        var invalidItem = new InventoryItem
+        var invalidDto = new ProductUpsertDto
         {
             Name = "Negative Widget",
             SKU = "NEG001",
-            Quantity = -10,
-            Location = "Warehouse B"
+            Quantity = -10
         };
 
-        // Manually simulate model validation since we are unit testing the controller method directly
-        controller.ModelState.AddModelError("Quantity", "Quantity cannot be negative.");
+        // Manually simulate model validation since DTO DataAnnotations handle this
+        controller.ModelState.AddModelError("InitialQuantity", "Initial quantity cannot be negative.");
 
         // Act
-        var result = await controller.CreateItem(invalidItem);
+        var result = await controller.UpsertProduct(invalidDto);
 
         // Assert
         var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
@@ -77,30 +76,35 @@ public class InventoryControllerTests
     }
 
     [Fact]
-    public async Task CreateItem_DuplicateSku_ReturnsConflict()
+    public async Task UpsertProduct_ExistingSku_UpdatesAndReturnsNoContent()
     {
         // Arrange
         using var context = GetInMemoryDbContext();
 
         // Seed an existing item into the in-memory database
-        context.InventoryItems.Add(new InventoryItem { Name = "Duplicate Test Item", SKU = "DUPE123", Quantity = 5 });
+        context.Products.Add(new Product { Name = "Original Name", SKU = "DUPE123", Quantity = 5 });
         await context.SaveChangesAsync();
 
-        var controller = new InventoryController(context);
+        var controller = new ProductController(context);
 
-        var duplicateItem = new InventoryItem
+        var updateDto = new ProductUpsertDto
         {
-            Name = "Duplicate Item",
+            Name = "Updated Name",
             SKU = "DUPE123", // Same SKU!
-            Quantity = 10,
-            Location = "Warehouse A"
+            Quantity = 99 // Should be ignored by upsert logic to protect stock
         };
 
         // Act
-        var result = await controller.CreateItem(duplicateItem);
+        var result = await controller.UpsertProduct(updateDto);
 
         // Assert
-        // Expects a 409 Conflict response
-        Assert.IsType<ConflictObjectResult>(result);
+        // PUT Upsert updates metadata and returns 204 NoContent on success
+        Assert.IsType<NoContentResult>(result);
+
+        // Verify name changed, but live quantity remained safe (5, not 99)
+        var dbItem = await context.Products.FirstOrDefaultAsync(i => i.SKU == "DUPE123");
+        Assert.NotNull(dbItem);
+        Assert.Equal("Updated Name", dbItem.Name);
+        Assert.Equal(5, dbItem.Quantity); // Proves quantity was protected from sync overwrite!
     }
 }
