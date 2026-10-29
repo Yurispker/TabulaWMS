@@ -1,5 +1,7 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using TabulaWMS.Services;
+using TabulaWMS.Models;
 using TabulaWMS.Data;
 
 
@@ -14,7 +16,17 @@ builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddOpenApi();
 
 builder.Services.AddDbContext<TabulaContext>(options =>
-    options.UseSqlite("Data Source=Data/app.db"));
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Register Identity services
+builder.Services.AddIdentity<User, IdentityRole>(options =>
+{
+    options.Password.RequireDigit = true;
+    options.Password.RequiredLength = 8;
+    options.Password.RequireUppercase = true;
+})
+.AddEntityFrameworkStores<TabulaContext>()
+.AddDefaultTokenProviders();
 
 var app = builder.Build();
 
@@ -25,6 +37,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllers();
 
