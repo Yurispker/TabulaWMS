@@ -18,6 +18,9 @@ namespace TabulaWMS.Models
 
         [Range(0, int.MaxValue, ErrorMessage = "Quantity must be greater than or equal to 0.")]
         public int Quantity { get; set; } = 0;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        public DateTime? UpdatedAt { get; set; }
 
 
         // Optional fields
@@ -25,5 +28,8 @@ namespace TabulaWMS.Models
 
         [StringLength(50, ErrorMessage = "Location cannot be longer than 50 characters.")]
         public string? Location { get; set; }
+
+        [Range(0.0, double.MaxValue, ErrorMessage = "Price must be greater than or equal to 0.")]
+        public decimal Price { get; set; } = 0.0m;
     }
 }

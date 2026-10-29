@@ -1,93 +1,50 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using TabulaWMS.Data;
+using TabulaWMS.Services;
 using TabulaWMS.Models;
 
 namespace TabulaWMS.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
-public class ProductController : ControllerBase
+[Route("api/products")]
+public class ProductsController : ControllerBase
 {
-    private readonly TabulaContext _context;
+    private readonly IProductService _productService;
+    private readonly ILogger<ProductsController> _logger;
 
-    public ProductController(TabulaContext context)
+
+    public ProductsController(IProductService productService, ILogger<ProductsController> logger)
     {
-        _context = context;
-    }
-
-    [HttpGet("{id}")]
-    public async Task<IActionResult> GetItem(int id)
-    {
-        var item = await _context.Products.FindAsync(id);
-
-        if (item == null)
-        {
-            return NotFound();
-        }
-
-        return Ok(item);
-    }
-
-    [HttpPut]
-    public async Task<IActionResult> UpsertProduct([FromBody] ProductUpsertDto payload)
-    {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
-        var existingProduct = await _context.Products
-            .FirstOrDefaultAsync(p => p.SKU == payload.SKU);
-
-        if (existingProduct == null)
-        {
-            // CASE 1: Brand new product. Set initial quantity from payload.
-            var newProduct = new Product
-            {
-                SKU = payload.SKU,
-                Name = payload.Name,
-                Description = payload.Description,
-                Quantity = payload.Quantity ?? 0
-            };
-
-            _context.Products.Add(newProduct);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetItem), new { id = newProduct.Id }, newProduct);
-        }
-        else
-        {
-            // CASE 2: Product already exists. Update metadata ONLY.
-            // Quantity not to be declared here!
-            existingProduct.Name = payload.Name;
-            existingProduct.Description = payload.Description;
-
-            await _context.SaveChangesAsync();
-            return NoContent(); // 204 Success
-        }
+        _productService = productService;
+        _logger = logger;
     }
 
     [HttpPost]
-    public async Task<IActionResult> UpdateProduct([FromBody] ProductUpsertDto payload)
+    public async Task<IActionResult> IngestProduct([FromBody] ProductUpsertDto dto)
     {
+        // Check if the incoming payload is valid according to our DTO's data annotations
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
         }
 
-        var existingProduct = await _context.Products
-            .FirstOrDefaultAsync(p => p.SKU == payload.SKU);
-
-        if (existingProduct == null)
+        try
         {
-            return NotFound(new { message = $"Product with SKU '{payload.SKU}' was not found." });
+            // Hand the payload over to our business logic service
+            var product = await _productService.UpsertProductAsync(dto);
+
+            // Return a clean success response back to Shopify
+            return Ok(new
+            {
+                message = "Product successfully ingested into TabulaWMS.",
+                sku = product.SKU,
+                name = product.Name
+            });
         }
-
-        existingProduct.Name = payload.Name;
-        existingProduct.Description = payload.Description;
-
-        await _context.SaveChangesAsync();
-        return NoContent();
+        catch (Exception ex)
+        {
+            // 4. Catch unexpected errors, log them securely, and return a 500
+            _logger.LogError(ex, "Error processing product ingestion for SKU {SKU}", dto.SKU);
+            return StatusCode(500, new { error = "An internal error occurred while syncing the product." });
+        }
     }
 }

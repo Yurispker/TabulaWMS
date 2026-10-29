@@ -1,10 +1,13 @@
 using Microsoft.EntityFrameworkCore;
+using TabulaWMS.Services;
 using TabulaWMS.Data;
 
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+
+builder.Services.AddScoped<IProductService, ProductService>();
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi

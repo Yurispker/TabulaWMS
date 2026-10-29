@@ -1,13 +1,11 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Xunit;
-using TabulaWMS.Controllers;
 using TabulaWMS.Data;
 using TabulaWMS.Models;
-using Microsoft.AspNetCore.Mvc;
+using TabulaWMS.Services;
 
-namespace TabulaWMS.tests;
+namespace TabulaWMS.Tests;
 
-public class ProductsControllerTests
+public class ProductServiceTests
 {
     private TabulaContext GetInMemoryDbContext()
     {
@@ -21,90 +19,97 @@ public class ProductsControllerTests
     }
 
     [Fact]
-    public async Task UpsertProduct_NewItem_ReturnsCreatedAtActionResult()
+    public async Task UpsertProductAsync_NewItem_CreatesProductAndSetsInitialQuantity()
     {
         // Arrange
-        var context = GetInMemoryDbContext();
-        var controller = new ProductController(context);
+        using var context = GetInMemoryDbContext();
+        var service = new ProductService(context);
 
         var newDto = new ProductUpsertDto
         {
-            Name = "Test Item",
-            Quantity = 3,
-            SKU = "Test001",
-            Description = "A test product"
+            SKU = "TEST-001",
+            Name = "Test Widget",
+            Description = "A test product",
+            Price = 19.99m,
+            Quantity = 5
         };
 
         // Act
-        var result = await controller.UpsertProduct(newDto);
+        // The service returns the created Product directly
+        var product = await service.UpsertProductAsync(newDto);
 
         // Assert
-        var createdAtActionResult = Assert.IsType<CreatedAtActionResult>(result);
-        var returnValue = Assert.IsType<Product>(createdAtActionResult.Value);
-        Assert.Equal(newDto.Name, returnValue.Name);
-        Assert.Equal(newDto.Quantity, returnValue.Quantity);
-        Assert.Equal(newDto.SKU, returnValue.SKU);
+        Assert.NotNull(product);
+        Assert.Equal("TEST-001", product.SKU);
+        Assert.Equal("Test Widget", product.Name);
+        Assert.Equal(5, product.Quantity);
 
-        var dbItem = await context.Products.FirstOrDefaultAsync(i => i.SKU == "Test001");
+        // Verify it was actually written to the database context
+        var dbItem = await context.Products.FirstOrDefaultAsync(p => p.SKU == "TEST-001");
         Assert.NotNull(dbItem);
-        Assert.Equal(3, dbItem.Quantity);
+        Assert.Equal(5, dbItem.Quantity);
     }
 
     [Fact]
-    public async Task UpsertProduct_NegativeQuantity_ReturnsBadRequest()
+    public async Task UpsertProductAsync_ExistingSku_UpdatesMetadataAndProtectsQuantity()
     {
         // Arrange
         using var context = GetInMemoryDbContext();
-        var controller = new ProductController(context);
 
-        var invalidDto = new ProductUpsertDto
+        // Seed an existing product into our in-memory database with real physical warehouse stock (50)
+        context.Products.Add(new Product
         {
-            Name = "Negative Widget",
-            SKU = "NEG001",
-            Quantity = -10
-        };
-
-        // Manually simulate model validation since DTO DataAnnotations handle this
-        controller.ModelState.AddModelError("InitialQuantity", "Initial quantity cannot be negative.");
-
-        // Act
-        var result = await controller.UpsertProduct(invalidDto);
-
-        // Assert
-        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
-        Assert.NotNull(badRequestResult.Value);
-    }
-
-    [Fact]
-    public async Task UpsertProduct_ExistingSku_UpdatesAndReturnsNoContent()
-    {
-        // Arrange
-        using var context = GetInMemoryDbContext();
-
-        // Seed an existing item into the in-memory database
-        context.Products.Add(new Product { Name = "Original Name", SKU = "DUPE123", Quantity = 5 });
+            SKU = "DUPE123",
+            Name = "Original Name",
+            Description = "Original Desc",
+            Price = 10.00m,
+            Quantity = 50, // Physical stock count
+            CreatedAt = DateTime.UtcNow.AddDays(-1)
+        });
         await context.SaveChangesAsync();
 
-        var controller = new ProductController(context);
+        var service = new ProductService(context);
 
         var updateDto = new ProductUpsertDto
         {
-            Name = "Updated Name",
             SKU = "DUPE123", // Same SKU!
-            Quantity = 99 // Should be ignored by upsert logic to protect stock
+            Name = "Updated Shopify Title",
+            Description = "Updated Desc",
+            Price = 29.99m,
+            Quantity = 999 // This should be ignored by the guardrail logic in the service to protect physical stock
         };
 
         // Act
-        var result = await controller.UpsertProduct(updateDto);
+        var updatedProduct = await service.UpsertProductAsync(updateDto);
 
         // Assert
-        // PUT Upsert updates metadata and returns 204 NoContent on success
-        Assert.IsType<NoContentResult>(result);
+        Assert.NotNull(updatedProduct);
+        Assert.Equal("Updated Shopify Title", updatedProduct.Name);
+        Assert.Equal(29.99m, updatedProduct.Price);
 
-        // Verify name changed, but live quantity remained safe (5, not 99)
-        var dbItem = await context.Products.FirstOrDefaultAsync(i => i.SKU == "DUPE123");
+        // Verify the database item updated its title/price, but kept its physical quantity safe at 50!
+        var dbItem = await context.Products.FirstOrDefaultAsync(p => p.SKU == "DUPE123");
         Assert.NotNull(dbItem);
-        Assert.Equal("Updated Name", dbItem.Name);
-        Assert.Equal(5, dbItem.Quantity); // Proves quantity was protected from sync overwrite!
+        Assert.Equal("Updated Shopify Title", dbItem.Name);
+        Assert.Equal(50, dbItem.Quantity);
+    }
+
+    [Fact]
+    public async Task UpsertProductAsync_NegativeQuantity_ThrowsArgumentException()
+    {
+        // Arrange
+        using var context = GetInMemoryDbContext();
+        var service = new ProductService(context);
+
+        var invalidDto = new ProductUpsertDto
+        {
+            SKU = "NEG-001",
+            Name = "Bad Widget",
+            Price = 10.00m,
+            Quantity = -15 // Invalid negative stock!
+        };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentException>(() => service.UpsertProductAsync(invalidDto));
     }
 }
