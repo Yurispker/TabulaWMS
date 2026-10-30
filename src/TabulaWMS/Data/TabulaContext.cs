@@ -1,10 +1,11 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using TabulaWMS.Models;
 
 namespace TabulaWMS.Data;
 
-public class TabulaContext : IdentityDbContext<User>
+public class TabulaContext : IdentityDbContext<User, IdentityRole, string>
 {
     public TabulaContext(DbContextOptions<TabulaContext> options) : base(options)
     {
@@ -17,15 +18,15 @@ public class TabulaContext : IdentityDbContext<User>
         // Build db tables
         base.OnModelCreating(builder);
 
-        // PRODUCT TABLE RULES
+        // Product rules
         builder.Entity<Product>(entity =>
         {
             entity.HasKey(p => p.Id);
             entity.Property(p => p.SKU).IsRequired();
-            entity.HasIndex(p => p.SKU).IsUnique(); // Guarantees duplicate SKUs are blocked at the database level
+            entity.HasIndex(p => p.SKU).IsUnique(); // Duplicate SKUs are blocked
         });
 
-        // USER RULES
+        // User rules
         builder.Entity<User>(entity =>
         {
             entity.Property(u => u.Name).IsRequired();

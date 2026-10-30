@@ -43,7 +43,7 @@ public class AuthController : ControllerBase
             Email = model.Email,
             Name = model.Name,
             Role = model.Role,
-            CreatedBy = "System" // For now; later we can track who created them
+            CreatedBy = "System" // For now
         };
 
         // Create user AND hash password

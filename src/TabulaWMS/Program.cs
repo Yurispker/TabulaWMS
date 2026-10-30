@@ -32,6 +32,7 @@ builder.Services.AddIdentity<User, IdentityRole>(options =>
 .AddDefaultTokenProviders();
 
 builder.Services.AddScoped<TokenService>();
+builder.Services.AddScoped<RoleService>();
 
 var jwtKey = builder.Configuration["JwtSettings:Key"];
 builder.Services.AddAuthentication(options =>
@@ -52,8 +53,6 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey!))
     };
 });
-
-builder.Services.AddControllers();
 
 var app = builder.Build();
 
