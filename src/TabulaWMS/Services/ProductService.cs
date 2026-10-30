@@ -55,4 +55,10 @@ public class ProductService : IProductService
             return existingProduct;
         }
     }
+
+    public async Task<IEnumerable<Product>> GetAllProductsAsync()
+    {
+        // Fetch all products from your SQLite database asynchronously
+        return await _context.Products.ToListAsync();
+    }
 }
