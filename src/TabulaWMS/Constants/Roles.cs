@@ -4,16 +4,12 @@ namespace TabulaWMS.Constants;
 public static class Roles
 {
     public const string Admin = "Admin";
-    public const string Manager = "Manager";
-    public const string Picker = "Picker";
-
-    public static readonly string[] All = { Admin, Manager, Picker };
 }
 
 public static class Permissions
 {
     public const string ManageRoles = "permissions:roles:manage";
-    
+
     public const string ViewProducts = "products:view";
     public const string CreateProducts = "products:create";
     public const string UpdateProducts = "products:update";

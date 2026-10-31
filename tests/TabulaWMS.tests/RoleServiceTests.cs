@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -6,9 +7,19 @@ using Moq;
 using TabulaWMS.Data;
 using TabulaWMS.Models;
 using TabulaWMS.Services;
+using TabulaWMS.Constants;
+using Xunit.Abstractions;
 
 public class RoleServiceTests
 {
+
+    private readonly ITestOutputHelper _output;
+
+    public RoleServiceTests(ITestOutputHelper output)
+    {
+        _output = output;
+    }
+
     private RoleService GetInMemoryRoleService(out TabulaContext context)
     {
         // Set up a fresh In-Memory database
@@ -26,10 +37,10 @@ public class RoleServiceTests
         var logger = new Mock<ILogger<RoleManager<IdentityRole>>>();
 
         var roleManager = new RoleManager<IdentityRole>(
-            store, 
-            roleValidators, 
-            normalizer, 
-            tokenProvider.Object, 
+            store,
+            roleValidators,
+            normalizer,
+            tokenProvider.Object,
             logger.Object);
 
         return new RoleService(roleManager);
@@ -40,14 +51,14 @@ public class RoleServiceTests
     {
         // Arrange
         var service = GetInMemoryRoleService(out var context);
-        string roleName = "InventoryAuditor";
+        string roleName = "Test Role 1";
 
         // Act
         var result = await service.CreateRoleAsync(roleName);
 
         // Assert
         Assert.True(result.Succeeded);
-        Assert.Equal($"Role '{roleName}' successfully created!", result.Message);
+        Assert.Equal($"Role {roleName} successfully created!", result.Message);
         Assert.Empty(result.Errors);
 
         // Verify it actually exists in the in-memory database
@@ -71,7 +82,7 @@ public class RoleServiceTests
         // Assert
         Assert.False(result.Succeeded);
         Assert.NotEmpty(result.Errors);
-        Assert.Contains($"Role '{roleName}' already exists.", result.Errors);
+        Assert.Contains($"Role {roleName} already exists.", result.Errors);
     }
 
     [Fact]
@@ -80,7 +91,7 @@ public class RoleServiceTests
         // Arrange
         var service = GetInMemoryRoleService(out var context);
         string roleName = "Picker";
-        string validPermission = Constants.Permissions.Products.Create; // e.g., "products:create"
+        string validPermission = Permissions.CreateProducts; // e.g., "products:create"
 
         await service.CreateRoleAsync(roleName);
 
@@ -89,7 +100,7 @@ public class RoleServiceTests
 
         // Assert
         Assert.True(result.Succeeded);
-        
+
         // Verify claim was actually assigned
         var permissions = await service.GetRolePermissionsAsync(roleName);
         Assert.Contains(validPermission, permissions);
@@ -110,6 +121,6 @@ public class RoleServiceTests
 
         // Assert
         Assert.False(result.Succeeded);
-        Assert.Contains($"Permission '{invalidPermission}' is not valid.", result.Errors);
+        Assert.Contains($"Permission {invalidPermission} is not valid.", result.Errors);
     }
 }
