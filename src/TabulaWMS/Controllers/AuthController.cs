@@ -4,6 +4,7 @@ using TabulaWMS.DTOs;
 using TabulaWMS.Models;
 using TabulaWMS.Services;
 using TabulaWMS.Constants;
+using Microsoft.EntityFrameworkCore;
 
 namespace TabulaWMS.Controllers;
 
@@ -14,15 +15,18 @@ public class AuthController : ControllerBase
     private readonly UserManager<User> _userManager;
     private readonly SignInManager<User> _signInManager;
     private readonly TokenService _tokenService;
+    private readonly RoleManager<IdentityRole> _roleManager;
 
     public AuthController(
         UserManager<User> userManager,
         SignInManager<User> signInManager,
-        TokenService tokenService)
+        TokenService tokenService,
+        RoleManager<IdentityRole> roleManager)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _tokenService = tokenService;
+        _roleManager = roleManager;
     }
 
     // Registration Endpoint
@@ -30,10 +34,35 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Register([FromBody] RegisterDto model)
     {
 
-        // Validate the role against our predefined roles
-        if (!Roles.All.Contains(model.Role))
+        // Check if this is the first user being registered
+        var isFirstUser = !await _userManager.Users.AnyAsync();
+
+        if (isFirstUser)
         {
-            return BadRequest($"Invalid role. Allowed roles are: {string.Join(", ", Roles.All)}");
+            // Force the first user to be an Admin
+            model.Role = Roles.Admin;
+
+            // Ensure the "Admin" role record exists in the database
+            if (!await _roleManager.RoleExistsAsync(Roles.Admin))
+            {
+                await _roleManager.CreateAsync(new IdentityRole(Roles.Admin));
+            }
+        }
+        var isValidRole = model.Role == Roles.Admin || await _roleManager.RoleExistsAsync(model.Role);
+
+        if (!isValidRole)
+        {
+            // Fetch all database
+            var dbRoles = await _roleManager.Roles
+                .Select(r => r.Name)
+                .ToListAsync();
+
+            // Ensure Admin is included in the allowed list
+            var allowedRoles = dbRoles.Contains(Roles.Admin)
+                ? dbRoles
+                : dbRoles.Append(Roles.Admin);
+
+            return BadRequest($"Invalid role. Allowed roles are: {string.Join(", ", allowedRoles)}");
         }
 
         // Map incoming web DTO data to database User model
@@ -55,7 +84,9 @@ public class AuthController : ControllerBase
             return BadRequest(result.Errors);
         }
 
-        return Ok(new { message = "User registered successfully!" });
+        await _userManager.AddToRoleAsync(user, model.Role);
+
+        return Ok(new { message = "User registered successfully!", roleAssigned = model.Role });
     }
 
     // Login Endpoint
