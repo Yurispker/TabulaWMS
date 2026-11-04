@@ -15,6 +15,5 @@ public class RegisterDto
     [Required]
     public required string Name { get; set; }
 
-    [Required]
-    public required string Role { get; set; } // e.g., "WarehouseOperator", "InventoryManager"
+    public string Role { get; set; } = String.Empty; // e.g., "WarehouseOperator", "InventoryManager"
 }

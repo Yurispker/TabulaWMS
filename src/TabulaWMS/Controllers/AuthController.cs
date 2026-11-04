@@ -48,7 +48,14 @@ public class AuthController : ControllerBase
                 await _roleManager.CreateAsync(new IdentityRole(Roles.Admin));
             }
         }
-        var isValidRole = model.Role == Roles.Admin || await _roleManager.RoleExistsAsync(model.Role);
+
+        else if (string.IsNullOrWhiteSpace(model.Role))
+        {
+            // Default role for any users who didn't specify one
+            model.Role = "None";
+        }
+
+        var isValidRole = model.Role == Roles.Admin || model.Role == Roles.None || await _roleManager.RoleExistsAsync(model.Role);
 
         if (!isValidRole)
         {

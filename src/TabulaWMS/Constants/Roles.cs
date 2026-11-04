@@ -4,6 +4,7 @@ namespace TabulaWMS.Constants;
 public static class Roles
 {
     public const string Admin = "Admin";
+    public const string None = "None"; // Default role for users without a specific role
 }
 
 public static class Permissions
