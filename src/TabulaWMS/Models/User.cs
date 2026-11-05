@@ -13,4 +13,8 @@ public class User : IdentityUser
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     [Required]
     public string CreatedBy { get; set; } = string.Empty;
+
+    // Refresh token properties
+    public string? RefreshToken { get; set; }
+    public DateTime RefreshTokenExpiryTime { get; set; }
 }

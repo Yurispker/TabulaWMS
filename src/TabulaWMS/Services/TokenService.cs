@@ -52,4 +52,29 @@ public class TokenService
         // Return token as string
         return tokenHandler.WriteToken(token);
     }
+
+    public ClaimsPrincipal? GetPrincipalFromExpiredToken(string token)
+    {
+        var tokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateAudience = true,
+            ValidAudience = _config["JwtSettings:Audience"],
+            ValidateIssuer = true,
+            ValidIssuer = _config["JwtSettings:Issuer"],
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = _key, // Reuses existing private _key field
+            ValidateLifetime = false // Allows validation of expired tokens
+        };
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var principal = tokenHandler.ValidateToken(token, tokenValidationParameters, out SecurityToken securityToken);
+
+        if (securityToken is not JwtSecurityToken jwtSecurityToken ||
+            !jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha512Signature, StringComparison.InvariantCultureIgnoreCase))
+        {
+            return null;
+        }
+
+        return principal;
+    }
 }

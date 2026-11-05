@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using System.Security.Cryptography;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using TabulaWMS.DTOs;
@@ -29,7 +31,10 @@ public class AuthController : ControllerBase
         _roleManager = roleManager;
     }
 
+    // --------------------------------------------------------------------------------------------------------------
     // Registration Endpoint
+    // --------------------------------------------------------------------------------------------------------------
+
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterDto model)
     {
@@ -97,7 +102,10 @@ public class AuthController : ControllerBase
         return Ok(new { message = "User registered successfully!", roleAssigned = model.Role });
     }
 
+    // --------------------------------------------------------------------------------------------------------------
     // Login Endpoint
+    // --------------------------------------------------------------------------------------------------------------
+
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginDto model)
     {
@@ -118,14 +126,65 @@ public class AuthController : ControllerBase
         // Generate JWT token
         var jwtToken = _tokenService.CreateToken(user);
 
+        var refreshToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
+        user.RefreshToken = refreshToken;
+        user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
+
+        // Save refresh token to database
+        await _userManager.UpdateAsync(user);
+
         // Return success
         return Ok(new
         {
             message = "Login successful!",
             token = jwtToken,
+            refreshToken = refreshToken,
             email = user.Email,
             name = user.Name,
             role = user.Role
+        });
+    }
+
+    // --------------------------------------------------------------------------------------------------------------
+    // Refresh Endpoint
+    // --------------------------------------------------------------------------------------------------------------
+
+    [HttpPost("refresh")]
+    public async Task<IActionResult> Refresh([FromBody] TokenRequestDto model)
+    {
+        if (model == null || string.IsNullOrEmpty(model.AccessToken) || string.IsNullOrEmpty(model.RefreshToken))
+        {
+            return BadRequest("Invalid client request");
+        }
+
+        // Extract principal from expired access token (ignoring lifetime check)
+        var principal = _tokenService.GetPrincipalFromExpiredToken(model.AccessToken);
+        if (principal == null)
+        {
+            return Unauthorized(new { message = "Invalid access token" });
+        }
+
+
+        var email = principal.FindFirstValue(ClaimTypes.Email);
+        var user = await _userManager.FindByEmailAsync(email!);
+
+        if (user == null || user.RefreshToken != model.RefreshToken || user.RefreshTokenExpiryTime <= DateTime.UtcNow)
+        {
+            return Unauthorized(new { message = "Invalid or expired refresh token" });
+        }
+
+        // Generate new tokens (Rotation)
+        var newAccessToken = _tokenService.CreateToken(user);
+        var newRefreshToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
+
+        user.RefreshToken = newRefreshToken;
+        user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
+        await _userManager.UpdateAsync(user);
+
+        return Ok(new
+        {
+            token = newAccessToken,
+            refreshToken = newRefreshToken
         });
     }
 }
