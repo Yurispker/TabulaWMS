@@ -13,6 +13,7 @@ public class AuthControllerTests
     private readonly TabulaContext _context;
     private readonly UserManager<User> _userManager;
     private readonly SignInManager<User> _signInManager;
+    private readonly RoleManager<IdentityRole> _roleManager;
     private readonly TokenService _tokenService;
     private readonly AuthController _controller;
 
@@ -38,8 +39,13 @@ public class AuthControllerTests
         // Setup SignInManager mock dependencies (SignInManager requires HttpContextAccessor and IUserClaimsPrincipalFactory)
         var contextAccessor = new Microsoft.AspNetCore.Http.HttpContextAccessor();
         var claimsFactory = new UserClaimsPrincipalFactory<User>(_userManager, Microsoft.Extensions.Options.Options.Create(new IdentityOptions()));
+        var identityOptions = Microsoft.Extensions.Options.Options.Create(new IdentityOptions());
         var signInManagerlogger = Microsoft.Extensions.Logging.Abstractions.NullLogger<SignInManager<User>>.Instance;
-        _signInManager = new SignInManager<User>(_userManager, contextAccessor, claimsFactory, null!, signInManagerlogger, null!, null!);
+        _signInManager = new SignInManager<User>(_userManager, contextAccessor, claimsFactory, identityOptions, signInManagerlogger, null!, null!);
+
+        // Setup RoleManager
+        var roleStore = new Microsoft.AspNetCore.Identity.EntityFrameworkCore.RoleStore<IdentityRole, TabulaContext>(_context);
+        _roleManager = new RoleManager<IdentityRole>(roleStore, null!, null!, null!, null!);
 
         // Setup TokenService
         var inMemorySettings = new Dictionary<string, string> {
@@ -53,8 +59,8 @@ public class AuthControllerTests
 
         _tokenService = new TokenService(configuration);
 
-        // 4. Instantiate the Controller
-        _controller = new AuthController(_userManager, _signInManager, _tokenService);
+        // Initialize the AuthController with the mocked services
+        _controller = new AuthController(_userManager, _signInManager, _tokenService, _roleManager);
     }
 
     [Fact]
