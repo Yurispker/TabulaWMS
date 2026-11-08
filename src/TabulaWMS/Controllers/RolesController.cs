@@ -8,7 +8,8 @@ namespace TabulaWMS.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-// [Authorize(Roles = Constants.Roles.Admin)] // We can lock this down to Admins later!
+[Authorize(Roles = Constants.Roles.Admin)]
+
 public class RolesController : ControllerBase
 {
     private readonly RoleService _roleService;

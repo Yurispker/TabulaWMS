@@ -7,6 +7,7 @@ using TabulaWMS.Models;
 using TabulaWMS.Services;
 using TabulaWMS.Constants;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace TabulaWMS.Controllers;
 
@@ -52,6 +53,7 @@ public class AuthController : ControllerBase
         {
             // Force the first user to be an Admin
             model.Role = Roles.Admin;
+            model.CreatedBy = "System";
 
             // Ensure the the default role records exist in the database
             if (!await _roleManager.RoleExistsAsync(Roles.Admin))
@@ -61,7 +63,19 @@ public class AuthController : ControllerBase
             }
         }
 
-        else if (!isFirstUser && model.Role == Roles.Admin)
+        // Check if user IS logged in and inject the current user's email as the CreatedBy field
+        else
+        {
+            var currentUserEmail = User.FindFirstValue(ClaimTypes.Email);
+            if (string.IsNullOrEmpty(currentUserEmail))
+            {
+                return Unauthorized(new { message = "Authentication required to register new users." });
+            }
+
+            model.CreatedBy = currentUserEmail;
+        }
+
+        if (!isFirstUser && model.Role == Roles.Admin)
         {
             // Prevent any subsequent users from being assigned the Admin role
             return BadRequest("The Admin role can only be assigned to the first registered user.");
@@ -83,15 +97,14 @@ public class AuthController : ControllerBase
 
             return BadRequest($"Invalid role. Allowed roles are: {string.Join(", ", allowedRoles)}");
         }
-
         // Map incoming web DTO data to database User model
         var user = new User
         {
-            UserName = model.Email, // ASP.NET Core Identity uses UserName as the unique login handle
+            UserName = model.Email, // Username is the e-mail address;
             Email = model.Email,
             Name = model.Name,
             Role = model.Role,
-            CreatedBy = "System" // For now
+            CreatedBy = model.CreatedBy // Record who created this account;
         };
 
         // Create user AND hash password
@@ -113,6 +126,7 @@ public class AuthController : ControllerBase
     // --------------------------------------------------------------------------------------------------------------
 
     [HttpPost("login")]
+    [EnableRateLimiting("login-limiter")] // Apply rate limiting to the login endpoint
     public async Task<IActionResult> Login([FromBody] LoginDto model)
     {
         // Find user by email
@@ -124,7 +138,15 @@ public class AuthController : ControllerBase
 
         // Check if password matches
         var result = await _signInManager.CheckPasswordSignInAsync(user, model.Password, lockoutOnFailure: false);
-        if (!result.Succeeded)
+
+        // If the user is locked out, return an error message
+        if (result.IsLockedOut)
+        {
+            return Unauthorized("This account has been locked out due to multiple failed login attempts. Please try again in 15 minutes.");
+        }
+
+        // Wrong credentials, but not locked out yet
+        else if (!result.Succeeded)
         {
             return Unauthorized("Invalid email or password.");
         }
