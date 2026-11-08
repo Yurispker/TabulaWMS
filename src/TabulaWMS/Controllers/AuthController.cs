@@ -39,6 +39,12 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Register([FromBody] RegisterDto model)
     {
 
+        // Set the role to None if none has been indicated
+        if (string.IsNullOrWhiteSpace(model.Role))
+        {
+            model.Role = Roles.None;
+        }
+
         // Check if this is the first user being registered
         var isFirstUser = !await _userManager.Users.AnyAsync();
 
@@ -55,10 +61,10 @@ public class AuthController : ControllerBase
             }
         }
 
-        else if (string.IsNullOrWhiteSpace(model.Role))
+        else if (!isFirstUser && model.Role == Roles.Admin)
         {
-            // Default role for any users who didn't specify one
-            model.Role = "None";
+            // Prevent any subsequent users from being assigned the Admin role
+            return BadRequest("The Admin role can only be assigned to the first registered user.");
         }
 
         var isValidRole = model.Role == Roles.Admin || model.Role == Roles.None || await _roleManager.RoleExistsAsync(model.Role);
