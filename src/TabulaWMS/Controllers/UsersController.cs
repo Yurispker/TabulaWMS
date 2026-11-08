@@ -20,7 +20,7 @@ public class UsersController : ControllerBase
         _roleManager = roleManager;
     }
 
-    // GET: api/users (Optional bonus: useful for viewing warehouse staff)
+    // View all users (Admin only)
     [HttpGet]
     public async Task<IActionResult> GetAllUsers()
     {

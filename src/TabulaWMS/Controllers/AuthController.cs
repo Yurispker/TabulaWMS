@@ -62,7 +62,19 @@ public class AuthController : ControllerBase
             }
         }
 
-        else if (!isFirstUser && model.Role == Roles.Admin)
+        // Check if user IS logged in and inject the current user's email as the CreatedBy field
+        else
+        {
+            var currentUserEmail = User.FindFirstValue(ClaimTypes.Email);
+            if (string.IsNullOrEmpty(currentUserEmail))
+            {
+                return Unauthorized(new { message = "Authentication required to register new users." });
+            }
+
+            model.CreatedBy = currentUserEmail;
+        }
+
+        if (!isFirstUser && model.Role == Roles.Admin)
         {
             // Prevent any subsequent users from being assigned the Admin role
             return BadRequest("The Admin role can only be assigned to the first registered user.");
@@ -84,15 +96,14 @@ public class AuthController : ControllerBase
 
             return BadRequest($"Invalid role. Allowed roles are: {string.Join(", ", allowedRoles)}");
         }
-
         // Map incoming web DTO data to database User model
         var user = new User
         {
-            UserName = model.Email, // ASP.NET Core Identity uses UserName as the unique login handle
+            UserName = model.Email, // Username is the e-mail address;
             Email = model.Email,
             Name = model.Name,
             Role = model.Role,
-            CreatedBy = "System" // For now
+            CreatedBy = model.CreatedBy // Record who created this account;
         };
 
         // Create user AND hash password
