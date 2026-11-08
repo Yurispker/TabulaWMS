@@ -7,6 +7,7 @@ using TabulaWMS.Models;
 using TabulaWMS.Services;
 using TabulaWMS.Constants;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace TabulaWMS.Controllers;
 
@@ -125,6 +126,7 @@ public class AuthController : ControllerBase
     // --------------------------------------------------------------------------------------------------------------
 
     [HttpPost("login")]
+    [EnableRateLimiting("login-limiter")] // Apply rate limiting to the login endpoint
     public async Task<IActionResult> Login([FromBody] LoginDto model)
     {
         // Find user by email
