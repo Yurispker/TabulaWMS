@@ -105,9 +105,38 @@ public class UsersController : ControllerBase
 
         return Ok(new { message = $"Successfully removed role '{model.Role}' from user {user.Email}." });
     }
-}
 
-public class UpdateRoleDto
-{
-    public string Role { get; set; } = string.Empty;
+    [HttpPost("unlock")]
+    public async Task<IActionResult> UnlockUser([FromBody] UnlockUserDto model)
+    {
+        // 1. Find the target user by their human-readable email
+        var user = await _userManager.FindByEmailAsync(model.Email);
+        if (user == null)
+        {
+            return NotFound(new { message = $"No user found with email '{model.Email}'." });
+        }
+
+        // 2. Check if the user is actually locked out
+        bool isLockedOut = await _userManager.IsLockedOutAsync(user);
+        if (!isLockedOut)
+        {
+            return BadRequest(new { message = $"User '{model.Email}' is not currently locked out." });
+        }
+
+        // 3. Clear the lockout end date
+        var setLockoutResult = await _userManager.SetLockoutEndDateAsync(user, null);
+        if (!setLockoutResult.Succeeded)
+        {
+            return BadRequest(setLockoutResult.Errors);
+        }
+
+        // 4. Reset the failed access attempt counter back to 0
+        var resetResult = await _userManager.ResetAccessFailedCountAsync(user);
+        if (!resetResult.Succeeded)
+        {
+            return BadRequest(resetResult.Errors);
+        }
+
+        return Ok(new { message = $"Account for '{user.Email}' has been successfully unlocked." });
+    }
 }

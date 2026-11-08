@@ -13,3 +13,13 @@ public class UserResponseDto
     public string Role { get; set; } = string.Empty;
     public string CreatedBy { get; set; } = string.Empty;
 }
+
+public class UpdateUserDto
+{
+    public string Email { get; set; } = string.Empty;
+}
+
+public class UnlockUserDto
+{
+    public string Email { get; set; } = string.Empty;
+}

@@ -138,7 +138,15 @@ public class AuthController : ControllerBase
 
         // Check if password matches
         var result = await _signInManager.CheckPasswordSignInAsync(user, model.Password, lockoutOnFailure: false);
-        if (!result.Succeeded)
+
+        // If the user is locked out, return an error message
+        if (result.IsLockedOut)
+        {
+            return Unauthorized("This account has been locked out due to multiple failed login attempts. Please try again in 15 minutes.");
+        }
+
+        // Wrong credentials, but not locked out yet
+        else if (!result.Succeeded)
         {
             return Unauthorized("Invalid email or password.");
         }
