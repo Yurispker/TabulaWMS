@@ -2,6 +2,16 @@ using System.ComponentModel.DataAnnotations;
 
 namespace TabulaWMS.DTOs;
 
+public class LoginDto
+{
+    [Required]
+    [EmailAddress]
+    public required string Email { get; set; }
+
+    [Required]
+    public required string Password { get; set; }
+}
+
 public class RegisterDto
 {
     [Required]
@@ -16,4 +26,7 @@ public class RegisterDto
     public required string Name { get; set; }
 
     public string Role { get; set; } = String.Empty; // e.g., "WarehouseOperator", "InventoryManager"
+
+    [Required]
+    public required string CreatedBy { get; set; } // "System" for the first user
 }

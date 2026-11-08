@@ -52,6 +52,7 @@ public class AuthController : ControllerBase
         {
             // Force the first user to be an Admin
             model.Role = Roles.Admin;
+            model.CreatedBy = "System";
 
             // Ensure the the default role records exist in the database
             if (!await _roleManager.RoleExistsAsync(Roles.Admin))
