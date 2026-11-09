@@ -16,13 +16,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
-builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ITenantService, TenantService>();
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-// Source - https://stackoverflow.com/a/79285112
-// Posted by Alexandre Stoppani
-// Retrieved 2026-11-05, License - CC BY-SA 4.0
+builder.Services.AddScoped<IProductService, ProductService>();
 
 builder.Services.AddOpenApi(options =>
 {
