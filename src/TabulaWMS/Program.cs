@@ -64,7 +64,7 @@ builder.Services.AddOpenApi(options =>
 });
 
 builder.Services.AddDbContext<TabulaContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Register User
 builder.Services.AddIdentity<User, IdentityRole>(options =>
