@@ -29,7 +29,8 @@ public class TokenService
         {
             new Claim(JwtRegisteredClaimNames.Email, user.Email!),
             new Claim(JwtRegisteredClaimNames.Name, user.Name),
-            new Claim(ClaimTypes.Role, user.Role)
+            new Claim(ClaimTypes.Role, user.Role),
+            new Claim("tenant_id", user.TenantId)
         };
 
         // Create signing credentials using secret key

@@ -13,14 +13,16 @@ public class TenantService : ITenantService
 
     public string? GetTenantId()
     {
-        var httpContext = _httpContextAccessor.HttpContext;
+        var user = _httpContextAccessor.HttpContext?.User;
 
         // Check if the incoming request includes custom tenant header
-        if (httpContext != null && httpContext.Request.Headers.TryGetValue("X-Tenant-Id", out var tenantHeader))
+        if (user == null)
         {
-            return tenantHeader.ToString();
+            return null;
         }
 
-        return null;
+        var tenantIdClaim = user.FindFirst("tenant_id")?.Value;
+
+        return tenantIdClaim;
     }
 }
