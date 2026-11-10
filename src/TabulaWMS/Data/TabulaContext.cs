@@ -22,6 +22,12 @@ public class TabulaContext : IdentityDbContext<User, IdentityRole, string>
         _configuration = configuration;
     }
 
+    // Secondary constructor overload for Unit Tests (Prevent test breakage)
+    public TabulaContext(DbContextOptions<TabulaContext> options) : base(options)
+    {
+        // For unit tests, we won't have a tenant service or configuration, so we can skip them.
+    }
+
     public DbSet<Product> Products => Set<Product>();
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

@@ -129,6 +129,12 @@ builder.Services.AddRateLimiter(options =>
 
 var app = builder.Build();
 
+// seed SuperAdmin user on startup
+using (var scope = app.Services.CreateScope())
+{
+    await DbInitializer.SeedSuperAdminAsync(scope.ServiceProvider, app.Configuration);
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -141,6 +147,7 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.UseRateLimiter();
 app.MapControllers();
 
 app.Run();
