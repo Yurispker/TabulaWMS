@@ -10,10 +10,12 @@ public class TokenService
 {
     private readonly IConfiguration _config;
     private readonly SymmetricSecurityKey _key;
+    private readonly ITenantService _tenantService;
 
-    public TokenService(IConfiguration config)
+    public TokenService(IConfiguration config, ITenantService tenantService)
     {
         _config = config;
+        _tenantService = tenantService;
 
         // Grab the secret key
         var secretKey = _config["JwtSettings:Key"];

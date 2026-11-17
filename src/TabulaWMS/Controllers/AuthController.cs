@@ -1,11 +1,13 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using TabulaWMS.DTOs;
 using TabulaWMS.Models;
 using TabulaWMS.Services;
 using Microsoft.AspNetCore.RateLimiting;
+using TabulaWMS.Data;
 
 namespace TabulaWMS.Controllers;
 
@@ -18,19 +20,25 @@ public class AuthController : ControllerBase
     private readonly TokenService _tokenService;
     private readonly RoleManager<IdentityRole> _roleManager;
     private readonly AuthService _authService;
+    private readonly ITenantService _tenantService;
+    private readonly TabulaContext _context;
 
     public AuthController(
         UserManager<User> userManager,
         SignInManager<User> signInManager,
         TokenService tokenService,
         RoleManager<IdentityRole> roleManager,
-        AuthService authService)
+        AuthService authService,
+        ITenantService tenantService,
+        TabulaContext context)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _tokenService = tokenService;
         _roleManager = roleManager;
         _authService = authService;
+        _tenantService = tenantService;
+        _context = context;
     }
 
     // --------------------------------------------------------------------------------------------------------------
@@ -64,6 +72,20 @@ public class AuthController : ControllerBase
     [EnableRateLimiting("login-limiter")] // Apply rate limiting to the login endpoint
     public async Task<IActionResult> Login([FromBody] LoginDto model)
     {
+
+        var directoryEntry = await _context.TenantUserDirectories
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Email == model.Email);
+
+        if (directoryEntry is null)
+        {
+            return Unauthorized(new { message = "Invalid credentials." });
+        }
+
+        // Switch active tenant schema before UserManager runs
+        _tenantService.SetTenantId(directoryEntry.TenantId);
+
+
         // Find user by email
         var user = await _userManager.FindByEmailAsync(model.Email);
         if (user == null)

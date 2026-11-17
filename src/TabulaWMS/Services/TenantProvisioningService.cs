@@ -75,8 +75,12 @@ public class TenantProvisioningService : ITenantProvisioningService
 
             await _context.Database.OpenConnectionAsync();
 
+
+            // Set the search path to the new schema for the current connection
+            #pragma warning disable EF1002 // Input sanitized in line 44
             await _context.Database.ExecuteSqlRawAsync(
                 $"SET search_path TO \"{tenantId}\", public;");
+            #pragma warning restore EF1002
 
             await _authService.RegisterUserAsync(new RegisterDto
             {

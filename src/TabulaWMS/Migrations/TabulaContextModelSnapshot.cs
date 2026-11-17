@@ -199,6 +199,25 @@ namespace TabulaWMS.Migrations
                     b.ToTable("Products");
                 });
 
+            modelBuilder.Entity("TabulaWMS.Models.TenantUserDirectory", b =>
+                {
+                    b.Property<string>("Email")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("TenantId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Email");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.ToTable("TenantUserDirectory", "public");
+                });
+
             modelBuilder.Entity("TabulaWMS.Models.User", b =>
                 {
                     b.Property<string>("Id")

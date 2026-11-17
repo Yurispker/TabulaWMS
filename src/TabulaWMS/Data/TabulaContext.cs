@@ -29,6 +29,7 @@ public class TabulaContext : IdentityDbContext<User, IdentityRole, string>
     }
 
     public DbSet<Product> Products => Set<Product>();
+    public DbSet<TenantUserDirectory> TenantUserDirectories { get; set; } = null!;
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -65,5 +66,9 @@ public class TabulaContext : IdentityDbContext<User, IdentityRole, string>
             entity.Property(u => u.Role).IsRequired();
             entity.Property(u => u.CreatedBy).IsRequired();
         });
+
+        //Email lookup table for tenant-user mapping
+        builder.Entity<TenantUserDirectory>()
+            .ToTable("TenantUserDirectory", "public");
     }
 }
