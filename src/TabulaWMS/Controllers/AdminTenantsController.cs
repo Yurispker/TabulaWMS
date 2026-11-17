@@ -41,7 +41,7 @@ public class AdminTenantsController : ControllerBase
                 TenantId = model.TenantId 
             });
         }
-        catch (ArgumentException ex)
+        catch (InvalidOperationException ex)
         {
             // Handles validation errors (e.g., invalid characters failing the regex check)
             return BadRequest(new { Error = ex.Message });

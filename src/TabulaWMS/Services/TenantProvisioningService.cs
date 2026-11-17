@@ -90,6 +90,22 @@ public class TenantProvisioningService : ITenantProvisioningService
                 Role = Roles.Admin,
                 CreatedBy = "System"
             });
+
+            var normalizedEmail = model.AdminEmail.Trim().ToLowerInvariant();
+
+            var exists = await _context.TenantUserDirectories
+                .AnyAsync(x => x.Email == normalizedEmail);
+
+            if (!exists)
+            {
+                _context.TenantUserDirectories.Add(new TenantUserDirectory
+                {
+                    Email = normalizedEmail,
+                    TenantId = tenantId
+                });
+
+                await _context.SaveChangesAsync();
+            }
         }
         catch (Exception ex)
         {

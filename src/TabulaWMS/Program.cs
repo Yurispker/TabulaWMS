@@ -65,9 +65,12 @@ builder.Services.AddOpenApi(options =>
     });
 });
 
-builder.Services.AddDbContext<TabulaContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
-
+builder.Services.AddScoped<TenantCommandInterceptor>();
+builder.Services.AddDbContext<TabulaContext>((sp, options) =>
+{
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
+           .AddInterceptors(sp.GetRequiredService<TenantCommandInterceptor>());
+});
 // Register User
 builder.Services.AddIdentity<User, IdentityRole>(options =>
 {
@@ -134,6 +137,12 @@ var app = builder.Build();
 // seed SuperAdmin user on startup
 using (var scope = app.Services.CreateScope())
 {
+    if (app.Configuration.GetValue<bool>("TestDatabase:ApplyMigrationsOnStartup"))
+    {
+        var db = scope.ServiceProvider.GetRequiredService<TabulaContext>();
+        await db.Database.MigrateAsync();
+    }
+
     await DbInitializer.SeedSuperAdminAsync(scope.ServiceProvider, app.Configuration);
 }
 
@@ -154,3 +163,5 @@ app.UseRateLimiter();
 app.MapControllers();
 
 app.Run();
+
+public partial class Program { }

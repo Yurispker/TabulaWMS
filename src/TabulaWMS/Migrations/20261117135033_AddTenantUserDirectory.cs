@@ -10,36 +10,20 @@ namespace TabulaWMS.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.EnsureSchema(
-                name: "public");
-
-            migrationBuilder.CreateTable(
-                name: "TenantUserDirectory",
-                schema: "public",
-                columns: table => new
-                {
-                    Email = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
-                    TenantId = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_TenantUserDirectory", x => x.Email);
-                });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_TenantUserDirectory_Email",
-                schema: "public",
-                table: "TenantUserDirectory",
-                column: "Email",
-                unique: true);
+            migrationBuilder.Sql("""
+                CREATE TABLE IF NOT EXISTS public."TenantUserDirectory" (
+                    "Email" character varying(256) NOT NULL,
+                    "TenantId" character varying(64) NOT NULL,
+                    CONSTRAINT "PK_TenantUserDirectory" PRIMARY KEY ("Email")
+                );
+                """);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "TenantUserDirectory",
-                schema: "public");
+            // Intentionally left empty or guarded so dropping a tenant doesn't drop the shared public directory
         }
+
     }
 }

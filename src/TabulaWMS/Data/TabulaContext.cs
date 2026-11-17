@@ -22,12 +22,6 @@ public class TabulaContext : IdentityDbContext<User, IdentityRole, string>
         _configuration = configuration;
     }
 
-    // Secondary constructor overload for Unit Tests (Prevent test breakage)
-    public TabulaContext(DbContextOptions<TabulaContext> options) : base(options)
-    {
-        // For unit tests, we won't have a tenant service or configuration, so we can skip them.
-    }
-
     public DbSet<Product> Products => Set<Product>();
     public DbSet<TenantUserDirectory> TenantUserDirectories { get; set; } = null!;
 
@@ -68,7 +62,10 @@ public class TabulaContext : IdentityDbContext<User, IdentityRole, string>
         });
 
         //Email lookup table for tenant-user mapping
-        builder.Entity<TenantUserDirectory>()
-            .ToTable("TenantUserDirectory", "public");
+        builder.Entity<TenantUserDirectory>(entity => 
+        {
+            entity.ToTable("TenantUserDirectory", "public"); // Ensure this table is always in the public schema
+            entity.HasKey(t => t.Email);
+        });
     }
 }

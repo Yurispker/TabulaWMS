@@ -75,17 +75,12 @@ public class AuthController : ControllerBase
 
         var directoryEntry = await _context.TenantUserDirectories
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.Email == model.Email);
-
-        if (directoryEntry is null)
-        {
-            return Unauthorized(new { message = "Invalid credentials." });
-        }
+            .FirstOrDefaultAsync(x => x.Email == model.Email.Trim().ToLowerInvariant());
 
         // If not in TenantUserDirectory, default to public schema
         var targetTenant = directoryEntry?.TenantId ?? "public";
         // Switch active tenant schema before UserManager runs
-        _tenantService.SetTenantId(directoryEntry.TenantId);
+        _tenantService.SetTenantId(targetTenant);
 
 
         // Find user by email
