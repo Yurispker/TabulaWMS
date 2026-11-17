@@ -26,13 +26,21 @@ public class TokenService
 
     public string CreateToken(User user)
     {
+
+        var tenantId = _tenantService.GetTenantId();
+
+        if (string.IsNullOrWhiteSpace(tenantId))
+        {
+            tenantId = "public"; // Default to public schema if no tenant is set
+        }
+
         // Define user data (claims) to be embedded in the JWT token
         var claims = new List<Claim>
         {
-            new Claim(JwtRegisteredClaimNames.Email, user.Email!),
-            new Claim(JwtRegisteredClaimNames.Name, user.Name),
+            new Claim(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
+            new Claim(JwtRegisteredClaimNames.Name, user.Name ?? string.Empty),
             new Claim(ClaimTypes.Role, user.Role),
-            new Claim("tenant_id", user.TenantId)
+            new Claim("tenant_id", tenantId)
         };
 
         // Create signing credentials using secret key

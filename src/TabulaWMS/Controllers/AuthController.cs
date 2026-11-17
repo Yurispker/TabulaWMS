@@ -82,6 +82,8 @@ public class AuthController : ControllerBase
             return Unauthorized(new { message = "Invalid credentials." });
         }
 
+        // If not in TenantUserDirectory, default to public schema
+        var targetTenant = directoryEntry?.TenantId ?? "public";
         // Switch active tenant schema before UserManager runs
         _tenantService.SetTenantId(directoryEntry.TenantId);
 

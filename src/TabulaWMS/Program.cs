@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using TabulaWMS.Services;
 using TabulaWMS.Models;
 using TabulaWMS.Data;
+using TabulaWMS.Middleware;
 using Scalar.AspNetCore;
 using Microsoft.OpenApi;
 
@@ -146,6 +147,7 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseAuthentication();
+app.UseMiddleware<TenantMiddleware>();
 app.UseAuthorization();
 
 app.UseRateLimiter();
