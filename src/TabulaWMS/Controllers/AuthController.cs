@@ -146,8 +146,15 @@ public class AuthController : ControllerBase
             return Unauthorized(new { message = "Invalid access token" });
         }
 
-
+        var tenantId = principal.FindFirstValue("tenant_id");
         var email = principal.FindFirstValue(ClaimTypes.Email);
+        if (string.IsNullOrWhiteSpace(tenantId)
+            || string.IsNullOrWhiteSpace(email))
+        {
+            return Unauthorized(new { message = "Invalid access token" });
+        }
+
+        _tenantService.SetTenantId(tenantId);
         var user = await _userManager.FindByEmailAsync(email!);
 
         if (user == null || user.RefreshToken != model.RefreshToken || user.RefreshTokenExpiryTime <= DateTime.UtcNow)

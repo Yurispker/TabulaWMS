@@ -11,9 +11,7 @@ namespace TabulaWMS.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "Products",
-                schema: "public");
+            migrationBuilder.Sql("""DROP TABLE IF EXISTS public."Products";""");
         }
 
         /// <inheritdoc />
