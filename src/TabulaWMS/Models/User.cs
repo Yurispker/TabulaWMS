@@ -17,4 +17,6 @@ public class User : IdentityUser
     // Refresh token properties
     public string? RefreshToken { get; set; }
     public DateTime RefreshTokenExpiryTime { get; set; }
+
+    public string TenantId { get; set; } = string.Empty;
 }

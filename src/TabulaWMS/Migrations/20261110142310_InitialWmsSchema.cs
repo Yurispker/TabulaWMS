@@ -5,15 +5,15 @@
 namespace TabulaWMS.Migrations
 {
     /// <inheritdoc />
-    public partial class AddSkuToInventoryItem : Migration
+    public partial class InitialWmsSchema : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AddColumn<string>(
-                name: "SKU",
-                table: "InventoryItems",
-                type: "TEXT",
+                name: "TenantId",
+                table: "AspNetUsers",
+                type: "text",
                 nullable: false,
                 defaultValue: "");
         }
@@ -22,8 +22,8 @@ namespace TabulaWMS.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(
-                name: "SKU",
-                table: "InventoryItems");
+                name: "TenantId",
+                table: "AspNetUsers");
         }
     }
 }

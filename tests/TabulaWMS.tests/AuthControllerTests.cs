@@ -8,7 +8,7 @@ using TabulaWMS.Models;
 using TabulaWMS.Services;
 using TabulaWMS.DTOs;
 
-public class AuthControllerTests
+public class AuthControllerTests : IAsyncLifetime
 {
     private readonly TabulaContext _context;
     private readonly UserManager<User> _userManager;
@@ -19,9 +19,13 @@ public class AuthControllerTests
 
     public AuthControllerTests()
     {
+
+        // Point to a dedicated test database
+        var connectionString = "Host=localhost;Port=5432;Database=TabulaWMS_TestDB;Username=postgres;Password=yourpassword";
+
         // Setup an isolated Database for testing
         var options = new DbContextOptionsBuilder<TabulaContext>()
-            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString()) // Fresh DB per test
+            .UseNpgsql(connectionString) // Fresh DB per test
             .Options;
 
         _context = new TabulaContext(options);
@@ -63,11 +67,27 @@ public class AuthControllerTests
         _controller = new AuthController(_userManager, _signInManager, _tokenService, _roleManager);
     }
 
+    // Runs before each test to ensure a clean database state
+    public async Task InitializeAsync()
+    {
+        await _context.Database.EnsureDeletedAsync();
+        await _context.Database.EnsureCreatedAsync();
+    }
+
+    public Task DisposeAsync() => Task.CompletedTask;
+
     [Fact]
     public async Task Login_WithValidCredentials_ReturnsOkWithToken()
     {
         // Arrange: Create a test user in the in-memory database
-        var user = new User { UserName = "test@warehouse.com", Email = "test@warehouse.com", Name = "Test User", Role = "Operator" };
+        var user = new User 
+        { 
+            UserName = "test@warehouse.com", 
+            Email = "test@warehouse.com", 
+            Name = "Test User", 
+            Role = "Operator",
+            TenantId = "public",
+        };
         await _userManager.CreateAsync(user, "SecurePassword123!");
 
         var loginDto = new LoginDto { Email = "test@warehouse.com", Password = "SecurePassword123!" };

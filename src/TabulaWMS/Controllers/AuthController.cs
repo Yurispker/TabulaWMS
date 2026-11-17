@@ -1,13 +1,13 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using TabulaWMS.DTOs;
 using TabulaWMS.Models;
 using TabulaWMS.Services;
-using TabulaWMS.Constants;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.RateLimiting;
+using TabulaWMS.Data;
 
 namespace TabulaWMS.Controllers;
 
@@ -19,17 +19,26 @@ public class AuthController : ControllerBase
     private readonly SignInManager<User> _signInManager;
     private readonly TokenService _tokenService;
     private readonly RoleManager<IdentityRole> _roleManager;
+    private readonly AuthService _authService;
+    private readonly ITenantService _tenantService;
+    private readonly TabulaContext _context;
 
     public AuthController(
         UserManager<User> userManager,
         SignInManager<User> signInManager,
         TokenService tokenService,
-        RoleManager<IdentityRole> roleManager)
+        RoleManager<IdentityRole> roleManager,
+        AuthService authService,
+        ITenantService tenantService,
+        TabulaContext context)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _tokenService = tokenService;
         _roleManager = roleManager;
+        _authService = authService;
+        _tenantService = tenantService;
+        _context = context;
     }
 
     // --------------------------------------------------------------------------------------------------------------
@@ -39,86 +48,20 @@ public class AuthController : ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterDto model)
     {
-
-        // Set the role to None if none has been indicated
-        if (string.IsNullOrWhiteSpace(model.Role))
+        try
         {
-            model.Role = Roles.None;
+            var callerEmail = User.FindFirstValue(ClaimTypes.Email);
+            var user = await _authService.RegisterUserAsync(model, callerEmail);
+            return Ok(new { message = "User registered successfully!", roleAssigned = user.Role });
         }
-
-        // Check if this is the first user being registered
-        var isFirstUser = !await _userManager.Users.AnyAsync();
-
-        if (isFirstUser)
+        catch (UnauthorizedAccessException ex)
         {
-            // Force the first user to be an Admin
-            model.Role = Roles.Admin;
-            model.CreatedBy = "System";
-
-            // Ensure the the default role records exist in the database
-            if (!await _roleManager.RoleExistsAsync(Roles.Admin))
-            {
-                await _roleManager.CreateAsync(new IdentityRole(Roles.Admin));
-                await _roleManager.CreateAsync(new IdentityRole(Roles.None));
-            }
+            return Unauthorized(new { message = ex.Message });
         }
-
-        // Check if user IS logged in and inject the current user's email as the CreatedBy field
-        else
+        catch (InvalidOperationException ex)
         {
-            var currentUserEmail = User.FindFirstValue(ClaimTypes.Email);
-            if (string.IsNullOrEmpty(currentUserEmail))
-            {
-                return Unauthorized(new { message = "Authentication required to register new users." });
-            }
-
-            model.CreatedBy = currentUserEmail;
+            return BadRequest(new { message = ex.Message });
         }
-
-        if (!isFirstUser && model.Role == Roles.Admin)
-        {
-            // Prevent any subsequent users from being assigned the Admin role
-            return BadRequest("The Admin role can only be assigned to the first registered user.");
-        }
-
-        var isValidRole = model.Role == Roles.Admin || model.Role == Roles.None || await _roleManager.RoleExistsAsync(model.Role);
-
-        if (!isValidRole)
-        {
-            // Fetch all database
-            var dbRoles = await _roleManager.Roles
-                .Select(r => r.Name)
-                .ToListAsync();
-
-            // Ensure Admin is included in the allowed list
-            var allowedRoles = dbRoles.Contains(Roles.Admin)
-                ? dbRoles
-                : dbRoles.Append(Roles.Admin);
-
-            return BadRequest($"Invalid role. Allowed roles are: {string.Join(", ", allowedRoles)}");
-        }
-        // Map incoming web DTO data to database User model
-        var user = new User
-        {
-            UserName = model.Email, // Username is the e-mail address;
-            Email = model.Email,
-            Name = model.Name,
-            Role = model.Role,
-            CreatedBy = model.CreatedBy // Record who created this account;
-        };
-
-        // Create user AND hash password
-        var result = await _userManager.CreateAsync(user, model.Password);
-
-        // If creation failed, return a 400 status code
-        if (!result.Succeeded)
-        {
-            return BadRequest(result.Errors);
-        }
-
-        await _userManager.AddToRoleAsync(user, model.Role);
-
-        return Ok(new { message = "User registered successfully!", roleAssigned = model.Role });
     }
 
     // --------------------------------------------------------------------------------------------------------------
@@ -129,6 +72,17 @@ public class AuthController : ControllerBase
     [EnableRateLimiting("login-limiter")] // Apply rate limiting to the login endpoint
     public async Task<IActionResult> Login([FromBody] LoginDto model)
     {
+
+        var directoryEntry = await _context.TenantUserDirectories
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Email == model.Email.Trim().ToLowerInvariant());
+
+        // If not in TenantUserDirectory, default to public schema
+        var targetTenant = directoryEntry?.TenantId ?? "public";
+        // Switch active tenant schema before UserManager runs
+        _tenantService.SetTenantId(targetTenant);
+
+
         // Find user by email
         var user = await _userManager.FindByEmailAsync(model.Email);
         if (user == null)

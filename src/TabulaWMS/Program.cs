@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using TabulaWMS.Services;
 using TabulaWMS.Models;
 using TabulaWMS.Data;
+using TabulaWMS.Middleware;
 using Scalar.AspNetCore;
 using Microsoft.OpenApi;
 
@@ -16,13 +17,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
-builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ITenantProvisioningService, TenantProvisioningService>();
+builder.Services.AddScoped<ITenantService, TenantService>();
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-// Source - https://stackoverflow.com/a/79285112
-// Posted by Alexandre Stoppani
-// Retrieved 2026-11-05, License - CC BY-SA 4.0
+builder.Services.AddScoped<IProductService, ProductService>();
 
 builder.Services.AddOpenApi(options =>
 {
@@ -66,9 +65,12 @@ builder.Services.AddOpenApi(options =>
     });
 });
 
-builder.Services.AddDbContext<TabulaContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
-
+builder.Services.AddScoped<TenantCommandInterceptor>();
+builder.Services.AddDbContext<TabulaContext>((sp, options) =>
+{
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
+           .AddInterceptors(sp.GetRequiredService<TenantCommandInterceptor>());
+});
 // Register User
 builder.Services.AddIdentity<User, IdentityRole>(options =>
 {
@@ -86,6 +88,7 @@ builder.Services.AddIdentity<User, IdentityRole>(options =>
 
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<RoleService>();
+builder.Services.AddScoped<AuthService>();
 
 var jwtKey = builder.Configuration["JwtSettings:Key"];
 builder.Services.AddAuthentication(options =>
@@ -131,6 +134,18 @@ builder.Services.AddRateLimiter(options =>
 
 var app = builder.Build();
 
+// seed SuperAdmin user on startup
+using (var scope = app.Services.CreateScope())
+{
+    if (app.Configuration.GetValue<bool>("TestDatabase:ApplyMigrationsOnStartup"))
+    {
+        var db = scope.ServiceProvider.GetRequiredService<TabulaContext>();
+        await db.Database.MigrateAsync();
+    }
+
+    await DbInitializer.SeedSuperAdminAsync(scope.ServiceProvider, app.Configuration);
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -141,8 +156,12 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseAuthentication();
+app.UseMiddleware<TenantMiddleware>();
 app.UseAuthorization();
 
+app.UseRateLimiter();
 app.MapControllers();
 
 app.Run();
+
+public partial class Program { }

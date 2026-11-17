@@ -18,3 +18,7 @@ obj/
 *.db
 *.db-shm
 *.db-wal
+
+# Agent files
+.clineignore
+.clinerules
