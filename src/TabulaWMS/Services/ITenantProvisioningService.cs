@@ -1,6 +1,7 @@
 namespace TabulaWMS.Services;
+using TabulaWMS.Models.DTOs;
 
 public interface ITenantProvisioningService
 {
-    Task ProvisionTenantAsync(string tenantId);
+    Task ProvisionTenantAsync(CreateTenantDto model);
 }

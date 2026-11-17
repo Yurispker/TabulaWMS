@@ -84,6 +84,7 @@ builder.Services.AddIdentity<User, IdentityRole>(options =>
 
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<RoleService>();
+builder.Services.AddScoped<AuthService>();
 
 var jwtKey = builder.Configuration["JwtSettings:Key"];
 builder.Services.AddAuthentication(options =>

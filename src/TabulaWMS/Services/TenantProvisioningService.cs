@@ -1,7 +1,13 @@
 using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using TabulaWMS.Data;
+using TabulaWMS.Models.DTOs;
+using TabulaWMS.Models;
+using TabulaWMS.DTOs;
+using TabulaWMS.Constants;
+
 
 namespace TabulaWMS.Services;
 
@@ -11,21 +17,29 @@ public class TenantProvisioningService : ITenantProvisioningService
     private readonly ITenantService _tenantService;
     private readonly TabulaContext _context;
     private readonly ILogger<TenantProvisioningService> _logger;
+    private readonly UserManager<User> _userManager;
+    private readonly AuthService _authService;
 
     public TenantProvisioningService(
         IConfiguration configuration,
         ITenantService tenantService,
         TabulaContext context,
-        ILogger<TenantProvisioningService> logger)
+        ILogger<TenantProvisioningService> logger,
+        UserManager<User> userManager,
+        AuthService authService)
     {
         _configuration = configuration;
         _tenantService = tenantService;
         _context = context;
-        _logger = logger;
+        _logger = logger;  
+        _userManager = userManager;
+        _authService = authService;
     }
 
-    public async Task ProvisionTenantAsync(string tenantId)
+    public async Task ProvisionTenantAsync(CreateTenantDto model)
     {
+        var tenantId = model.TenantId;
+
         // Sanitize and validate tenantId to prevent SQL injection.
         if (string.IsNullOrWhiteSpace(tenantId) || !Regex.IsMatch(tenantId, "^[a-z0-9_]+$"))
         {
@@ -58,6 +72,20 @@ public class TenantProvisioningService : ITenantProvisioningService
             // Apply EF Core migrations to materialize all tables inside the new schema
             await _context.Database.MigrateAsync();
             _logger.LogInformation("Successfully applied EF Core migrations for tenant schema: {TenantId}", tenantId);
+
+            await _context.Database.OpenConnectionAsync();
+
+            await _context.Database.ExecuteSqlRawAsync(
+                $"SET search_path TO \"{tenantId}\", public;");
+
+            await _authService.RegisterUserAsync(new RegisterDto
+            {
+                Email = model.AdminEmail,
+                Password = model.AdminPassword,
+                Name = model.AdminName,
+                Role = Roles.Admin,
+                CreatedBy = "System"
+            });
         }
         catch (Exception ex)
         {
@@ -70,11 +98,13 @@ public class TenantProvisioningService : ITenantProvisioningService
                 await cleanupConnection.OpenAsync();
                 using var cleanupCommand = cleanupConnection.CreateCommand();
                 
-                // CASCADE ensures any partial tables dropped safely
+                // Drop schema and any subsequent objects (tables, sequences, etc.) that may have been partially created
                 cleanupCommand.CommandText = $"DROP SCHEMA IF EXISTS \"{tenantId}\" CASCADE;";
                 await cleanupCommand.ExecuteNonQueryAsync();
                 
                 _logger.LogInformation("Successfully cleaned up orphaned schema: {TenantId}", tenantId);
+
+                
             }
             catch (Exception cleanupEx)
             {
@@ -82,6 +112,10 @@ public class TenantProvisioningService : ITenantProvisioningService
             }
 
             throw; // Rethrow the original migration exception
+        }
+        finally
+        {
+            await _context.Database.CloseConnectionAsync();
         }
     }
 }

@@ -34,7 +34,7 @@ public class AdminTenantsController : ControllerBase
             _logger.LogInformation("Admin requested provisioning for tenant: {TenantId}", model.TenantId);
             
             // Calls the TenantProvisioningService to create the schema and apply migrations
-            await _provisioningService.ProvisionTenantAsync(model.TenantId);
+            await _provisioningService.ProvisionTenantAsync(model);
 
             return Ok(new { 
                 Message = $"Tenant schema '{model.TenantId}' was successfully created and migrated.",
