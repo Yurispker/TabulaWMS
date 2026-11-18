@@ -42,6 +42,7 @@ public class TenantProvisioningService : ITenantProvisioningService
 
     public async Task ProvisionTenantAsync(CreateTenantDto model)
     {
+        
         var tenantId = model.TenantId;
 
         // Sanitize and validate tenantId to prevent SQL injection.
