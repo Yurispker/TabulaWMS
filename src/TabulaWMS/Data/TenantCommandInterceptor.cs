@@ -37,6 +37,21 @@ public class TenantCommandInterceptor : DbCommandInterceptor
         return base.NonQueryExecuting(command, eventData, result);
     }
 
+    public override InterceptionResult<object> ScalarExecuting(
+        DbCommand command, CommandEventData eventData, InterceptionResult<object> result)
+    {
+        SetSearchPath(command);
+        return base.ScalarExecuting(command, eventData, result);
+    }
+
+    public override async ValueTask<InterceptionResult<object>> ScalarExecutingAsync(
+        DbCommand command, CommandEventData eventData, InterceptionResult<object> result,
+        CancellationToken cancellationToken = default)
+    {
+        await SetSearchPathAsync(command, cancellationToken);
+        return await base.ScalarExecutingAsync(command, eventData, result, cancellationToken);
+    }
+
     public override async ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(
         DbCommand command, CommandEventData eventData, InterceptionResult<int> result,
         CancellationToken cancellationToken = default)
@@ -60,14 +75,15 @@ public class TenantCommandInterceptor : DbCommandInterceptor
     private DbCommand CreateSearchPathCommand(DbCommand command)
     {
         var tenantId = _tenantService.GetTenantId();
-        var schema = (!string.IsNullOrWhiteSpace(tenantId) && ValidTenantRegex.IsMatch(tenantId))
-            ? tenantId
-            : "public";
+        if (string.IsNullOrWhiteSpace(tenantId) || !ValidTenantRegex.IsMatch(tenantId))
+            {
+                throw new InvalidOperationException($"Invalid tenant ID: {tenantId}");
+            }
 
         var searchPathCommand = command.Connection?.CreateCommand()
             ?? throw new InvalidOperationException("The database command has no connection.");
         searchPathCommand.Transaction = command.Transaction;
-        searchPathCommand.CommandText = $"SET search_path TO \"{schema}\", public;";
+        searchPathCommand.CommandText = $"SET search_path TO \"{tenantId}\", public;";
         return searchPathCommand;
     }
 }
