@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using TabulaWMS.Models;
 using TabulaWMS.Services;
 using TabulaWMS.Constants;
 
@@ -8,7 +7,7 @@ namespace TabulaWMS.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-// [Authorize(Roles = Constants.Roles.Admin)]
+[Authorize(Policy = Permissions.ManageRoles)]
 
 public class RolesController : ControllerBase
 {

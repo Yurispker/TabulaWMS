@@ -10,6 +10,7 @@ public static class Roles
 public static class Permissions
 {
     public const string ManageRoles = "permissions:roles:manage";
+    public const string ManageAccounts = "permissions:accounts:manage";
 
     public const string ViewProducts = "products:view";
     public const string CreateProducts = "products:create";
@@ -28,6 +29,7 @@ public static class Permissions
         return new[]
         {
             ManageRoles,
+            ManageAccounts,
             ViewProducts,
             CreateProducts,
             UpdateProducts,

@@ -8,7 +8,7 @@ using TabulaWMS.DTOs;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Admin")] // Admins only
+[Authorize(Policy = Permissions.ManageAccounts)] // Admins only
 public class UsersController : ControllerBase
 {
     private readonly UserManager<User> _userManager;

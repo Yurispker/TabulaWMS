@@ -6,8 +6,10 @@ using Microsoft.AspNetCore.Mvc;
 using TabulaWMS.DTOs;
 using TabulaWMS.Models;
 using TabulaWMS.Services;
-using Microsoft.AspNetCore.RateLimiting;
+using TabulaWMS.Constants;
 using TabulaWMS.Data;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.Authorization;
 
 namespace TabulaWMS.Controllers;
 
@@ -49,6 +51,7 @@ public class AuthController : ControllerBase
     // --------------------------------------------------------------------------------------------------------------
 
     [HttpPost("register")]
+    [Authorize(Policy = Permissions.ManageAccounts)]
     public async Task<IActionResult> Register([FromBody] RegisterDto model)
     {
         try

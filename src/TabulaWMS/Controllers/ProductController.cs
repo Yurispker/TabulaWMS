@@ -23,6 +23,7 @@ public class ProductsController : ControllerBase
 
     // GET /api/products
     [HttpGet]
+    [Authorize(Policy = Permissions.ViewProducts)]
     public async Task<IActionResult> GetProducts([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
     {
         try
@@ -52,8 +53,8 @@ public class ProductsController : ControllerBase
     }
 
     // POST /api/products
-    [Authorize(Roles = "Admin,Manager")]
     [HttpPost]
+    [Authorize(Policy = Permissions.CreateProducts)]
     public async Task<IActionResult> IngestProduct([FromBody] ProductDto dto)
     {
         // Check if the incoming payload is valid
@@ -77,13 +78,14 @@ public class ProductsController : ControllerBase
         }
         catch (Exception ex)
         {
-            // 4. Catch unexpected errors, log them securely, and return a 500 response to the client
+            // Catch unexpected errors, log them securely, and return a 500 response to the client
             _logger.LogError(ex, "Error processing product ingestion for SKU {SKU}", dto.SKU);
             return StatusCode(500, new { error = "An internal error occurred while syncing the product." });
         }
     }
 
     [HttpGet("{sku}")]
+    [Authorize(Policy = Permissions.ViewProducts)]
     public async Task<IActionResult> GetProductBySku(string sku)
     {
         if (string.IsNullOrWhiteSpace(sku))

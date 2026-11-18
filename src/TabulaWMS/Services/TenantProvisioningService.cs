@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -20,6 +21,7 @@ public class TenantProvisioningService : ITenantProvisioningService
     private readonly UserManager<User> _userManager;
     private readonly AuthService _authService;
     private readonly AdminDbContext _adminContext;
+    private readonly RoleManager<IdentityRole> _roleManager;
     private static readonly Regex ValidTenantRegex = new("^[a-z0-9_]+$", RegexOptions.Compiled);
 
     public TenantProvisioningService(
@@ -29,7 +31,8 @@ public class TenantProvisioningService : ITenantProvisioningService
         ILogger<TenantProvisioningService> logger,
         UserManager<User> userManager,
         AuthService authService,
-        AdminDbContext adminContext)
+        AdminDbContext adminContext,
+        RoleManager<IdentityRole> roleManager)
     {
         _configuration = configuration;
         _tenantService = tenantService;
@@ -38,6 +41,7 @@ public class TenantProvisioningService : ITenantProvisioningService
         _userManager = userManager;
         _authService = authService;
         _adminContext = adminContext;
+        _roleManager = roleManager;
     }
 
     public async Task ProvisionTenantAsync(CreateTenantDto model)
@@ -95,6 +99,21 @@ public class TenantProvisioningService : ITenantProvisioningService
                 Role = Roles.Admin
             });
 
+            var adminRole = await _roleManager.FindByNameAsync(Roles.Admin);
+            if (adminRole != null)
+            {
+                foreach (var permission in Permissions.GetAllPermissions())
+                {
+                    // Check if the claim already exists to prevent duplicate key exceptions
+                    var existingClaims = await _roleManager.GetClaimsAsync(adminRole);
+                    if (!existingClaims.Any(c => c.Type == "permission" && c.Value == permission))
+                    {
+                        await _roleManager.AddClaimAsync(adminRole, new Claim("permission", permission));
+                    }
+                }
+                _logger.LogInformation("Successfully assigned all system permissions to the Admin role for tenant: {TenantId}", tenantId);
+            }
+
             var normalizedEmail = model.AdminEmail.Trim().ToLowerInvariant();
 
             var exists = await _context.TenantUserDirectories
@@ -115,7 +134,7 @@ public class TenantProvisioningService : ITenantProvisioningService
         {
             _logger.LogError(ex, "Failed to apply migrations for tenant schema: {TenantId}", tenantId);
             
-            // RESILIENCY / CLEANUP: If migrations fail halfway, drop the empty/corrupted schema
+            // If migrations fail halfway, drop the empty/corrupted schema
             try
             {
                 using var cleanupConnection = new NpgsqlConnection(baseConnString);
@@ -147,19 +166,19 @@ public class TenantProvisioningService : ITenantProvisioningService
     {
         var sanitizedTenantId = tenantId?.Trim().ToLowerInvariant();
 
-        // 1. Validate format to prevent SQL injection
+        // Validate format to prevent SQL injection
         if (string.IsNullOrWhiteSpace(sanitizedTenantId) || !ValidTenantRegex.IsMatch(sanitizedTenantId))
         {
             throw new InvalidOperationException("Invalid tenant identifier format.");
         }
 
-        // 2. Protect reserved system schemas
+        // Protect reserved system schemas
         if (sanitizedTenantId == "public" || sanitizedTenantId == "dbo" || sanitizedTenantId == "postgres")
         {
             throw new InvalidOperationException("Cannot delete reserved system schemas.");
         }
 
-        // 3. Find directory entries in the public schema
+        // Find directory entries in the public schema
         var tenantEntries = await _adminContext.TenantUserDirectories
             .Where(x => x.TenantId == sanitizedTenantId)
             .ToListAsync();
@@ -169,7 +188,7 @@ public class TenantProvisioningService : ITenantProvisioningService
             throw new KeyNotFoundException($"Tenant '{sanitizedTenantId}' not found.");
         }
 
-        // 4. Perform deletion inside a transaction
+        // Perform deletion inside a transaction
         using var transaction = await _adminContext.Database.BeginTransactionAsync();
         try
         {
