@@ -60,7 +60,8 @@ public class AuthService
 
         if (!isValidRole)
         {
-            throw new InvalidOperationException($"Invalid role: {model.Role}");
+                await _roleManager.CreateAsync(new IdentityRole(model.Role));
+                
         }
 
         var user = new User
