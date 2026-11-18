@@ -13,7 +13,7 @@ public class ProductService : IProductService
         _context = context;
     }
 
-    public async Task<Product> UpsertProductAsync(ProductUpsertDto dto)
+    public async Task<Product> UpsertProductAsync(ProductDto dto)
     {
 
         // Check if quantity is negative
@@ -56,17 +56,38 @@ public class ProductService : IProductService
         }
     }
 
-public async Task<(IEnumerable<Product> Products, int TotalCount)> GetPagedProductsAsync(int pageNumber, int pageSize)
-{
-    var query = _context.Products.AsNoTracking();
+    public async Task<(IEnumerable<Product> Products, int TotalCount)> GetPagedProductsAsync(int pageNumber, int pageSize)
+    {
+        var query = _context.Products.AsNoTracking();
 
-    var totalCount = await query.CountAsync();
+        var totalCount = await query.CountAsync();
 
-    var products = await query
-        .Skip((pageNumber - 1) * pageSize)
-        .Take(pageSize)
-        .ToListAsync();
+        var products = await query
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
 
-    return (products, totalCount);
-}
+        return (products, totalCount);
+    }
+    public async Task<ProductDto?> GetProductBySkuAsync(string sku)
+    {
+        if (string.IsNullOrWhiteSpace(sku))
+        {
+            return null;
+        }
+
+        var sanitizedSku = sku.Trim();
+
+        return await _context.Products
+            .AsNoTracking()
+            .Where(p => p.SKU == sanitizedSku)
+            .Select(p => new ProductDto 
+            { 
+                SKU = p.SKU,
+                Name = p.Name,
+                Price = p.Price,
+                Quantity = p.Quantity 
+            })
+            .FirstOrDefaultAsync();
+    }
 }

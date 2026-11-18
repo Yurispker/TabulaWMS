@@ -4,6 +4,7 @@ namespace TabulaWMS.Services;
 
 public interface IProductService
 {
-    Task<Product> UpsertProductAsync(ProductUpsertDto dto);
+    Task<Product> UpsertProductAsync(ProductDto dto);
     Task<(IEnumerable<Product> Products, int TotalCount)> GetPagedProductsAsync(int pageNumber, int pageSize);
+    Task<ProductDto?> GetProductBySkuAsync(string sku);
 }

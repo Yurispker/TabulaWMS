@@ -54,7 +54,7 @@ public class ProductsController : ControllerBase
     // POST /api/products
     [Authorize(Roles = "Admin,Manager")]
     [HttpPost]
-    public async Task<IActionResult> IngestProduct([FromBody] ProductUpsertDto dto)
+    public async Task<IActionResult> IngestProduct([FromBody] ProductDto dto)
     {
         // Check if the incoming payload is valid
         if (!ModelState.IsValid)
@@ -80,6 +80,32 @@ public class ProductsController : ControllerBase
             // 4. Catch unexpected errors, log them securely, and return a 500 response to the client
             _logger.LogError(ex, "Error processing product ingestion for SKU {SKU}", dto.SKU);
             return StatusCode(500, new { error = "An internal error occurred while syncing the product." });
+        }
+    }
+
+    [HttpGet("{sku}")]
+    public async Task<IActionResult> GetProductBySku(string sku)
+    {
+        if (string.IsNullOrWhiteSpace(sku))
+        {
+            return BadRequest(new { Error = "SKU parameter is required." });
+        }
+
+        try
+        {
+            var product = await _productService.GetProductBySkuAsync(sku);
+
+            if (product == null)
+            {
+                return NotFound(new { Error = $"Product with SKU '{sku.Trim()}' was not found." });
+            }
+
+            return Ok(product);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving product by SKU: {Sku}", sku);
+            return StatusCode(500, new { Error = "An internal error occurred while retrieving the product." });
         }
     }
 }
