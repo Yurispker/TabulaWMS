@@ -81,7 +81,7 @@ public class TokenService
         var principal = tokenHandler.ValidateToken(token, tokenValidationParameters, out SecurityToken securityToken);
 
         if (securityToken is not JwtSecurityToken jwtSecurityToken ||
-            !jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha512Signature, StringComparison.InvariantCultureIgnoreCase))
+            !jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha512, StringComparison.InvariantCultureIgnoreCase))
         {
             return null;
         }
