@@ -19,6 +19,9 @@ obj/
 *.db-shm
 *.db-wal
 
-# Agent files
-.clineignore
-.clinerules
+# --- React / Vite Frontend Ignores ---
+client/node_modules/
+client/dist/
+client/.env.local
+client/.env.*.local
+
