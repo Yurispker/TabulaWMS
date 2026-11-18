@@ -56,9 +56,17 @@ public class ProductService : IProductService
         }
     }
 
-    public async Task<IEnumerable<Product>> GetAllProductsAsync()
-    {
-        // Fetch all products from your SQLite database asynchronously
-        return await _context.Products.ToListAsync();
-    }
+public async Task<(IEnumerable<Product> Products, int TotalCount)> GetPagedProductsAsync(int pageNumber, int pageSize)
+{
+    var query = _context.Products.AsNoTracking();
+
+    var totalCount = await query.CountAsync();
+
+    var products = await query
+        .Skip((pageNumber - 1) * pageSize)
+        .Take(pageSize)
+        .ToListAsync();
+
+    return (products, totalCount);
+}
 }

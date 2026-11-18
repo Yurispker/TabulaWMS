@@ -22,20 +22,31 @@ public class ProductsController : ControllerBase
     }
 
     // GET /api/products
-    [Authorize]
     [HttpGet]
-    public async Task<IActionResult> GetProducts()
+    public async Task<IActionResult> GetProducts([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
     {
         try
         {
-            // Fetch products from the service layer
-            var products = await _productService.GetAllProductsAsync();
+            // Safety validation for pagination limits
+            if (pageNumber < 1) pageNumber = 1;
+            if (pageSize < 1) pageSize = 10;
+            if (pageSize > 100) pageSize = 100; // Prevent massive memory dumps
 
-            return Ok(products);
+            // Fetch paginated products and total count from service
+            var (products, totalCount) = await _productService.GetPagedProductsAsync(pageNumber, pageSize);
+
+            return Ok(new
+            {
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
+                TotalCount = totalCount,
+                Items = products
+            });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving products list.");
+            _logger.LogError(ex, "Error retrieving paginated products list.");
             return StatusCode(500, new { error = "An internal error occurred while retrieving products." });
         }
     }
