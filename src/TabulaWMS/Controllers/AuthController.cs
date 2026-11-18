@@ -109,7 +109,7 @@ public class AuthController : ControllerBase
         }
 
         // Generate JWT token
-        var jwtToken = _tokenService.CreateToken(user);
+        var jwtToken = await _tokenService.CreateTokenAsync(user);
 
         var refreshToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
         user.RefreshToken = refreshToken;
@@ -166,7 +166,7 @@ public class AuthController : ControllerBase
         }
 
         // Generate new tokens (Rotation)
-        var newAccessToken = _tokenService.CreateToken(user);
+        var newAccessToken = await _tokenService.CreateTokenAsync(user);
         var newRefreshToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
 
         user.RefreshToken = newRefreshToken;
