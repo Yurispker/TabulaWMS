@@ -26,7 +26,4 @@ public class RegisterDto
     public required string Name { get; set; }
 
     public string Role { get; set; } = String.Empty; // e.g., "WarehouseOperator", "InventoryManager"
-
-    [Required]
-    public required string CreatedBy { get; set; } // "System" for the first user
 }

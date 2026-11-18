@@ -26,11 +26,12 @@ public class AuthService
         }
 
         var isFirstUser = !await _userManager.Users.AnyAsync();
+        string createdBy;
 
         if (isFirstUser)
         {
             model.Role = Roles.Admin;
-            model.CreatedBy = "System";
+            createdBy = "System";
 
             if (!await _roleManager.RoleExistsAsync(Roles.Admin))
             {
@@ -45,7 +46,7 @@ public class AuthService
                 throw new UnauthorizedAccessException("Authentication required to register new users.");
             }
 
-            model.CreatedBy = callerEmail;
+            createdBy = callerEmail;
         }
 
         if (!isFirstUser && model.Role == Roles.Admin)
@@ -68,7 +69,7 @@ public class AuthService
             Email = model.Email,
             Name = model.Name,
             Role = model.Role,
-            CreatedBy = model.CreatedBy
+            CreatedBy = createdBy
         };
 
         var result = await _userManager.CreateAsync(user, model.Password);

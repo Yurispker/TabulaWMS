@@ -87,8 +87,7 @@ public class TenantProvisioningService : ITenantProvisioningService
                 Email = model.AdminEmail,
                 Password = model.AdminPassword,
                 Name = model.AdminName,
-                Role = Roles.Admin,
-                CreatedBy = "System"
+                Role = Roles.Admin
             });
 
             var normalizedEmail = model.AdminEmail.Trim().ToLowerInvariant();
