@@ -66,6 +66,12 @@ builder.Services.AddOpenApi(options =>
 });
 
 builder.Services.AddScoped<TenantCommandInterceptor>();
+
+// Global / Public context (no interceptor, targets public schema)
+builder.Services.AddDbContext<AdminDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Tenant-scoped context
 builder.Services.AddDbContext<TabulaContext>((sp, options) =>
 {
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))

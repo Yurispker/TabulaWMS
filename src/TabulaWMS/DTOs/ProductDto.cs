@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace TabulaWMS.Models;
 
-public class ProductUpsertDto
+public class ProductDto
 {
     [Required]
     [RegularExpression(@"^[a-zA-Z0-9\-_./]+$", ErrorMessage = "SKU can only contain letters, numbers, hyphens, and underscores.")]

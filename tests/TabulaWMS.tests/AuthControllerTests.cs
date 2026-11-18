@@ -78,6 +78,7 @@ public class AuthControllerTests
             null!,
             null!,
             tenantService.Object,
+            null!,
             null!);
 
         var result = await controller.Refresh(new TokenRequestDto

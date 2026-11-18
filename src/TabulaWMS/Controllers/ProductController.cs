@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using TabulaWMS.Services;
 using TabulaWMS.Models;
 using Microsoft.AspNetCore.Authorization;
+using TabulaWMS.Constants;
 
 namespace TabulaWMS.Controllers;
 
@@ -21,20 +22,31 @@ public class ProductsController : ControllerBase
     }
 
     // GET /api/products
-    [Authorize]
     [HttpGet]
-    public async Task<IActionResult> GetProducts()
+    public async Task<IActionResult> GetProducts([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
     {
         try
         {
-            // Fetch products from the service layer
-            var products = await _productService.GetAllProductsAsync();
+            // Safety validation for pagination limits
+            if (pageNumber < 1) pageNumber = 1;
+            if (pageSize < 1) pageSize = 10;
+            if (pageSize > 100) pageSize = 100; // Prevent massive memory dumps
 
-            return Ok(products);
+            // Fetch paginated products and total count from service
+            var (products, totalCount) = await _productService.GetPagedProductsAsync(pageNumber, pageSize);
+
+            return Ok(new
+            {
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
+                TotalCount = totalCount,
+                Items = products
+            });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving products list.");
+            _logger.LogError(ex, "Error retrieving paginated products list.");
             return StatusCode(500, new { error = "An internal error occurred while retrieving products." });
         }
     }
@@ -42,7 +54,7 @@ public class ProductsController : ControllerBase
     // POST /api/products
     [Authorize(Roles = "Admin,Manager")]
     [HttpPost]
-    public async Task<IActionResult> IngestProduct([FromBody] ProductUpsertDto dto)
+    public async Task<IActionResult> IngestProduct([FromBody] ProductDto dto)
     {
         // Check if the incoming payload is valid
         if (!ModelState.IsValid)
@@ -68,6 +80,32 @@ public class ProductsController : ControllerBase
             // 4. Catch unexpected errors, log them securely, and return a 500 response to the client
             _logger.LogError(ex, "Error processing product ingestion for SKU {SKU}", dto.SKU);
             return StatusCode(500, new { error = "An internal error occurred while syncing the product." });
+        }
+    }
+
+    [HttpGet("{sku}")]
+    public async Task<IActionResult> GetProductBySku(string sku)
+    {
+        if (string.IsNullOrWhiteSpace(sku))
+        {
+            return BadRequest(new { Error = "SKU parameter is required." });
+        }
+
+        try
+        {
+            var product = await _productService.GetProductBySkuAsync(sku);
+
+            if (product == null)
+            {
+                return NotFound(new { Error = $"Product with SKU '{sku.Trim()}' was not found." });
+            }
+
+            return Ok(product);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving product by SKU: {Sku}", sku);
+            return StatusCode(500, new { Error = "An internal error occurred while retrieving the product." });
         }
     }
 }

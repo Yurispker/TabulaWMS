@@ -19,6 +19,8 @@ public class TenantProvisioningService : ITenantProvisioningService
     private readonly ILogger<TenantProvisioningService> _logger;
     private readonly UserManager<User> _userManager;
     private readonly AuthService _authService;
+    private readonly AdminDbContext _adminContext;
+    private static readonly Regex ValidTenantRegex = new("^[a-z0-9_]+$", RegexOptions.Compiled);
 
     public TenantProvisioningService(
         IConfiguration configuration,
@@ -26,7 +28,8 @@ public class TenantProvisioningService : ITenantProvisioningService
         TabulaContext context,
         ILogger<TenantProvisioningService> logger,
         UserManager<User> userManager,
-        AuthService authService)
+        AuthService authService,
+        AdminDbContext adminContext)
     {
         _configuration = configuration;
         _tenantService = tenantService;
@@ -34,6 +37,7 @@ public class TenantProvisioningService : ITenantProvisioningService
         _logger = logger;  
         _userManager = userManager;
         _authService = authService;
+        _adminContext = adminContext;
     }
 
     public async Task ProvisionTenantAsync(CreateTenantDto model)
@@ -41,7 +45,7 @@ public class TenantProvisioningService : ITenantProvisioningService
         var tenantId = model.TenantId;
 
         // Sanitize and validate tenantId to prevent SQL injection.
-        if (string.IsNullOrWhiteSpace(tenantId) || !Regex.IsMatch(tenantId, "^[a-z0-9_]+$"))
+        if (string.IsNullOrWhiteSpace(tenantId) || !ValidTenantRegex.IsMatch(tenantId))
         {
             throw new ArgumentException("Invalid tenant identifier. Use only lowercase letters, numbers, and underscores.", nameof(tenantId));
         }
@@ -87,8 +91,7 @@ public class TenantProvisioningService : ITenantProvisioningService
                 Email = model.AdminEmail,
                 Password = model.AdminPassword,
                 Name = model.AdminName,
-                Role = Roles.Admin,
-                CreatedBy = "System"
+                Role = Roles.Admin
             });
 
             var normalizedEmail = model.AdminEmail.Trim().ToLowerInvariant();
@@ -136,6 +139,53 @@ public class TenantProvisioningService : ITenantProvisioningService
         finally
         {
             await _context.Database.CloseConnectionAsync();
+        }
+    }
+
+    public async Task DeleteTenantAsync(string tenantId)
+    {
+        var sanitizedTenantId = tenantId?.Trim().ToLowerInvariant();
+
+        // 1. Validate format to prevent SQL injection
+        if (string.IsNullOrWhiteSpace(sanitizedTenantId) || !ValidTenantRegex.IsMatch(sanitizedTenantId))
+        {
+            throw new InvalidOperationException("Invalid tenant identifier format.");
+        }
+
+        // 2. Protect reserved system schemas
+        if (sanitizedTenantId == "public" || sanitizedTenantId == "dbo" || sanitizedTenantId == "postgres")
+        {
+            throw new InvalidOperationException("Cannot delete reserved system schemas.");
+        }
+
+        // 3. Find directory entries in the public schema
+        var tenantEntries = await _adminContext.TenantUserDirectories
+            .Where(x => x.TenantId == sanitizedTenantId)
+            .ToListAsync();
+
+        if (!tenantEntries.Any())
+        {
+            throw new KeyNotFoundException($"Tenant '{sanitizedTenantId}' not found.");
+        }
+
+        // 4. Perform deletion inside a transaction
+        using var transaction = await _adminContext.Database.BeginTransactionAsync();
+        try
+        {
+            // Remove the user directory mappings from public schema
+            _adminContext.TenantUserDirectories.RemoveRange(tenantEntries);
+            await _adminContext.SaveChangesAsync();
+
+            // Drop the actual PostgreSQL schema and all tables/relations inside it
+            var dropSchemaSql = $"DROP SCHEMA IF EXISTS \"{sanitizedTenantId}\" CASCADE;";
+            await _adminContext.Database.ExecuteSqlRawAsync(dropSchemaSql);
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
         }
     }
 }
