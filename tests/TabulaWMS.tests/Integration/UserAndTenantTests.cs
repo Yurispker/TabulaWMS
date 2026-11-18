@@ -39,7 +39,7 @@ public class TenantProvisioningAndLoginTests : IClassFixture<IntegrationTestData
         var tenant = CreateTenantCredentials();
         await ProvisionTenantAsSystemAdminAsync(tenant);
 
-        await AssertSchemaExistsAsync(tenant.TenantId);
+        await AssertTenantSchemaStructureAsync(tenant.TenantId);
 
         using (var scope = _fixture.Services.CreateScope())
         {
@@ -120,17 +120,43 @@ public class TenantProvisioningAndLoginTests : IClassFixture<IntegrationTestData
             TenantAdminPassword);
     }
 
-    private async Task AssertSchemaExistsAsync(string schemaName)
+    private async Task AssertTenantSchemaStructureAsync(string schemaName)
     {
+        string[] expectedTables =
+        [
+            "AspNetRoles",
+            "AspNetRoleClaims",
+            "AspNetUsers",
+            "AspNetUserClaims",
+            "AspNetUserLogins",
+            "AspNetUserRoles",
+            "AspNetUserTokens",
+            "Products"
+        ];
+
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync();
 
         await using var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = @schema);";
+        cmd.CommandText = """
+            SELECT table_name
+            FROM information_schema.tables
+            WHERE table_schema = @schema
+              AND table_type = 'BASE TABLE';
+            """;
         cmd.Parameters.AddWithValue("schema", schemaName);
 
-        var exists = (bool)(await cmd.ExecuteScalarAsync())!;
-        Assert.True(exists, $"Expected PostgreSQL schema '{schemaName}' to exist.");
+        var actualTables = new HashSet<string>();
+        await using var reader = await cmd.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            actualTables.Add(reader.GetString(0));
+        }
+
+        var missingTables = expectedTables.Except(actualTables).ToArray();
+        Assert.True(
+            missingTables.Length == 0,
+            $"Expected PostgreSQL schema '{schemaName}' to contain tables: {string.Join(", ", missingTables)}.");
     }
 
     private sealed record TenantCredentials(string TenantId, string Email, string Password);

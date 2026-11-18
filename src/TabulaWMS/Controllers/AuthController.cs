@@ -22,6 +22,7 @@ public class AuthController : ControllerBase
     private readonly AuthService _authService;
     private readonly ITenantService _tenantService;
     private readonly TabulaContext _context;
+    private readonly AdminDbContext _adminDbContext;
 
     public AuthController(
         UserManager<User> userManager,
@@ -30,7 +31,8 @@ public class AuthController : ControllerBase
         RoleManager<IdentityRole> roleManager,
         AuthService authService,
         ITenantService tenantService,
-        TabulaContext context)
+        TabulaContext context,
+        AdminDbContext adminDbContext)
     {
         _userManager = userManager;
         _signInManager = signInManager;
@@ -39,6 +41,7 @@ public class AuthController : ControllerBase
         _authService = authService;
         _tenantService = tenantService;
         _context = context;
+        _adminDbContext = adminDbContext;
     }
 
     // --------------------------------------------------------------------------------------------------------------
@@ -73,7 +76,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Login([FromBody] LoginDto model)
     {
 
-        var directoryEntry = await _context.TenantUserDirectories
+        var directoryEntry = await _adminDbContext.TenantUserDirectories
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.Email == model.Email.Trim().ToLowerInvariant());
 

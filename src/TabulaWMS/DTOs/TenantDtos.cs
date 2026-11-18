@@ -25,3 +25,8 @@ public class CreateTenantDto
     [StringLength(100)]
     public string AdminName { get; set; } = string.Empty;
 }
+
+public class DeleteTenantDto
+{
+    public string TenantId { get; set; } = string.Empty;
+}

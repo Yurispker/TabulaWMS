@@ -52,4 +52,31 @@ public class AdminTenantsController : ControllerBase
             return StatusCode(500, new { Error = "An error occurred while provisioning the tenant. The operation was rolled back." });
         }
     }
+
+    [HttpDelete("{tenantId}")]
+    public async Task<IActionResult> DeleteTenant(string tenantId)
+    {
+        var sanitizedTenantId = tenantId?.Trim().ToLowerInvariant();
+
+        if (string.IsNullOrWhiteSpace(sanitizedTenantId))
+        {
+            return BadRequest(new { Error = "Tenant identifier is required." });
+        }
+
+        try
+        {
+            // Call your service to drop the schema and clean up public records
+            await _provisioningService.DeleteTenantAsync(sanitizedTenantId);
+
+            return Ok(new { Message = $"Tenant '{sanitizedTenantId}' was successfully deleted." });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { Error = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { Error = ex.Message });
+        }
+    }
 }
