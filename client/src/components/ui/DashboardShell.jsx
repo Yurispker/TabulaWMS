@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   Package,
@@ -27,6 +27,15 @@ export function DashboardShell({ user, onLogout }) {
   const [isCreatingProduct, setIsCreatingProduct] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [successNotice, setSuccessNotice] = useState();
+  
+
+  useEffect(() => {
+    if (!successNotice) return undefined;
+
+    const timeoutId = window.setTimeout(() => setSuccessNotice(null), 4000);
+    return () => window.clearTimeout(timeoutId);
+  }, [successNotice]);
 
   const activeItem = NAV_ITEMS.find((item) => item.id === activeTab);
 
@@ -51,7 +60,7 @@ export function DashboardShell({ user, onLogout }) {
       <aside
         aria-label="Primary navigation"
         className={cn(
-          "fixed inset-y-0 left-0 z-40 flex flex-col border-r border-border bg-card text-card-foreground transition-all duration-200 md:static",
+          "fixed inset-y-0 left-0 z-40 flex flex-col border-r border-border bg-card text-card-foreground transition-all duration-200 md:sticky md:top-0 md:bottom-auto md:h-screen md:self-start",
           isCollapsed ? "md:w-16" : "md:w-64",
           mobileOpen ? "w-64 translate-x-0" : "-translate-x-full md:translate-x-0"
         )}
@@ -186,6 +195,11 @@ export function DashboardShell({ user, onLogout }) {
                 <CreateProductPage
                   user={user}
                   onCancel={() => setIsCreatingProduct(false)}
+                  onCreated={(sku) => {
+                    setIsCreatingProduct(false);
+                    setActiveTab("products");
+                    setSuccessNotice({ message: `Product ${sku} created successfully.` });
+                  }}
                 />
               ) : (
                 <ProductsPage
@@ -206,6 +220,15 @@ export function DashboardShell({ user, onLogout }) {
           )}
         </main>
       </div>
+      {successNotice && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed inset-x-4 bottom-4 z-50 mx-auto w-fit max-w-sm animate-in fade-in slide-in-from-bottom-4 rounded-lg border border-[#059669] bg-[#064E3B] px-4 py-3 text-sm font-medium text-[#ECFDF5] shadow-lg duration-300"
+        >
+          {successNotice.message}
+        </div>
+      )}
     </div>
   );
 }

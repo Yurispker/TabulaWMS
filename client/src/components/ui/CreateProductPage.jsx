@@ -5,7 +5,7 @@ import { apiClient } from "@/lib/api";
 const INPUT_CLASS_NAME =
   "h-9 w-full rounded-lg border border-input bg-background px-3 text-sm focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50";
 
-export function CreateProductPage({ user, onCancel }) {
+export function CreateProductPage({ user, onCancel, onCreated }) {
   const [product, setProduct] = useState({
     sku: "",
     name: "",
@@ -15,7 +15,6 @@ export function CreateProductPage({ user, onCancel }) {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
 
   const updateProduct = (field) => (event) => {
     setProduct((current) => ({ ...current, [field]: event.target.value }));
@@ -24,7 +23,6 @@ export function CreateProductPage({ user, onCancel }) {
   const handleSubmit = async (event) => {
     event.preventDefault();
     setErrorMessage("");
-    setSuccessMessage("");
 
     if (!user?.token) {
       setErrorMessage("Your session token is missing. Please sign in again.");
@@ -39,6 +37,7 @@ export function CreateProductPage({ user, onCancel }) {
     }
 
     setIsSubmitting(true);
+    let wasCreated = false;
 
     try {
       await apiClient.post(
@@ -52,7 +51,7 @@ export function CreateProductPage({ user, onCancel }) {
         },
         { headers: { Authorization: `Bearer ${user.token}` } }
       );
-      setSuccessMessage("Product created successfully.");
+      wasCreated = true;
     } catch (error) {
       if (error.response?.status === 401) {
         setErrorMessage("Your session has expired. Please sign in again.");
@@ -75,6 +74,8 @@ export function CreateProductPage({ user, onCancel }) {
     } finally {
       setIsSubmitting(false);
     }
+
+    if (wasCreated) onCreated(sku);
   };
 
   return (
@@ -180,12 +181,6 @@ export function CreateProductPage({ user, onCancel }) {
               {errorMessage}
             </p>
           )}
-          {successMessage && (
-            <p role="status" className="text-sm text-muted-foreground">
-              {successMessage}
-            </p>
-          )}
-
           <div className="flex justify-end border-t border-border pt-4">
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "Creating..." : "Create product"}
