@@ -3,6 +3,7 @@ import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Eye, EyeClosed } from "lucide-react";
+import { DashboardShell } from "@/components/ui/DashboardShell";
 
 // Reusable Axios instance configured for C# API
 const apiClient = axios.create({
@@ -24,6 +25,13 @@ function App() {
   const [errorMessage, setErrorMessage] = useState("");
   const [authData, setAuthData] = useState(null);
 
+  const handleLogout = () => {
+    sessionStorage.removeItem("tabula_wms_token");
+    sessionStorage.removeItem("tabula_wms_refresh_token");
+    setAuthData(null);
+    setPassword("");
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault(); // Stops default full-page HTML form reload
     setErrorMessage("");
@@ -43,6 +51,8 @@ function App() {
         email: trimmedEmail,
         password,
       });
+
+      console.log("Login response:", response.data);
 
       const data = response.data ?? {};
 
@@ -75,8 +85,11 @@ function App() {
     }
   };
 
+    if (authData) {
+      return <DashboardShell user={authData} onLogout={handleLogout} />;
+    }
+
   return (
-    <html lang="en" className="dark">
     <main className="flex min-h-screen items-center h-auto justify-center bg-background px-4 py-10 text-foreground">
       <div className="w-full max-w-xl rounded-xl border border-border bg-card p-8 text-card-foreground shadow-sm">
         <div className="mb-6 space-y-1">
@@ -170,7 +183,6 @@ function App() {
         </form>
       </div>
     </main>
-  </html>
   );
 }
 
