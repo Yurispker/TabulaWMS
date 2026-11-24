@@ -121,6 +121,17 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    input:-webkit-autofill,
+    input:-webkit-autofill:hover,
+    input:-webkit-autofill:focus,
+    input:-webkit-autofill:active,
+    input:autofill {
+      -webkit-box-shadow: 0 0 0 1000px var(--color-background) inset !important;
+      box-shadow: 0 0 0 1000px var(--color-background) inset !important;
+      -webkit-text-fill-color: var(--color-foreground) !important;
+      caret-color: var(--color-foreground);
+      transition: background-color 5000s ease-in-out 0s;
+      }
     }
   body {
     @apply bg-background text-foreground;

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { Eye, EyeClosed } from "lucide-react";
 
 // Reusable Axios instance configured for C# API
 const apiClient = axios.create({
@@ -19,6 +20,7 @@ function App() {
 
   // Request status and user feedback state
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [authData, setAuthData] = useState(null);
 
@@ -76,7 +78,7 @@ function App() {
   return (
     <html lang="en" className="dark">
     <main className="flex min-h-screen items-center justify-center bg-background px-4 py-10 text-foreground">
-      <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 text-card-foreground shadow-sm">
+      <div className="w-full max-w-lg rounded-xl border border-border bg-card p-8 text-card-foreground shadow-sm">
         <div className="mb-6 space-y-1">
           <h1 className="text-2xl text-center font-semibold tracking-tight">Tabula WMS</h1>
           <p className="text-sm text-center text-muted-foreground">Sign in to your account</p>
@@ -91,6 +93,7 @@ function App() {
               id="email"
               name="email"
               type="email"
+              autoFocus
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -107,20 +110,40 @@ function App() {
             <label htmlFor="password" className="block text-sm font-medium">
               Password
             </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={isSubmitting}
-              className={cn(
-                "flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1.5 text-sm shadow-xs",
-                "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
-                "disabled:cursor-not-allowed disabled:opacity-50"
-              )}
-            />
+            <div className="relative">
+              <input
+                id="password"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={isSubmitting}
+                className={cn(
+                  "flex h-9 w-full rounded-lg border border-input bg-background py-1.5 pr-10 pl-3 text-sm shadow-xs",
+                  "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+                  "disabled:cursor-not-allowed disabled:opacity-50"
+                )}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                disabled={isSubmitting}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                aria-pressed={showPassword}
+                className={cn(
+                  "absolute inset-y-0 right-0 flex w-9 items-center justify-center text-muted-foreground transition-colors",
+                  "hover:text-foreground focus-visible:text-foreground focus-visible:outline-none",
+                  "disabled:cursor-not-allowed disabled:opacity-50"
+                )}
+              >
+                {showPassword ? (
+                  <Eye className="size-4" aria-hidden="true" />
+                ) : (
+                  <EyeClosed className="size-4" aria-hidden="true" />
+                )}
+              </button>
+            </div>
           </div>
 
           {errorMessage && (
