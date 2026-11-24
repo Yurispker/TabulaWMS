@@ -1,18 +1,9 @@
 import React, { useState } from "react";
-import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Eye, EyeClosed } from "lucide-react";
 import { DashboardShell } from "@/components/ui/DashboardShell";
-
-// Reusable Axios instance configured for C# API
-const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "",
-  withCredentials: true, // Allows cookie handling when talking to the backend
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
+import { apiClient } from "@/lib/api";
 
 function App() {
   // Controlled form state for the two required backend fields

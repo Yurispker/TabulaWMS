@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { ProductsPage } from "@/components/ui/ProductsPage";
 
 const NAV_ITEMS = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -175,12 +176,7 @@ export function DashboardShell({ user, onLogout }) {
           )}
 
           {activeTab === "products" && (
-            <div className="rounded-xl border border-border bg-card p-6 shadow-xs">
-              <h2 className="text-lg font-medium">Products</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                SKU catalog, stock levels, and bin locations will appear here.
-              </p>
-            </div>
+            <ProductsPage user={user} />
           )}
 
           {activeTab === "orders" && (

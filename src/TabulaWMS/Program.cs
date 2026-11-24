@@ -8,6 +8,7 @@ using TabulaWMS.Services;
 using TabulaWMS.Models;
 using TabulaWMS.Data;
 using TabulaWMS.Middleware;
+using TabulaWMS.Constants;
 using Scalar.AspNetCore;
 using Microsoft.OpenApi;
 
@@ -114,6 +115,15 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = builder.Configuration["JwtSettings:Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey!))
     };
+});
+
+builder.Services.AddAuthorization(options =>
+{
+    foreach (var permission in Permissions.GetAllPermissions())
+    {
+        options.AddPolicy(permission, policy =>
+            policy.RequireAuthenticatedUser().RequireClaim("permission", permission));
+    }
 });
 
 // 1. Add rate limiting services
