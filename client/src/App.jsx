@@ -77,14 +77,14 @@ function App() {
 
   return (
     <html lang="en" className="dark">
-    <main className="flex min-h-screen items-center justify-center bg-background px-4 py-10 text-foreground">
-      <div className="w-full max-w-lg rounded-xl border border-border bg-card p-8 text-card-foreground shadow-sm">
+    <main className="flex min-h-screen items-center h-auto justify-center bg-background px-4 py-10 text-foreground">
+      <div className="w-full max-w-xl rounded-xl border border-border bg-card p-8 text-card-foreground shadow-sm">
         <div className="mb-6 space-y-1">
-          <h1 className="text-2xl text-center font-semibold tracking-tight">Tabula WMS</h1>
+          <h1 className="text-5xl text-center font-semibold tracking-tight">Tabula WMS</h1>
           <p className="text-sm text-center text-muted-foreground">Sign in to your account</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+        <form onSubmit={handleSubmit} className="space-y-5" noValidate>
           <div className="space-y-1.5">
             <label htmlFor="email" className="block text-sm font-medium">
               Email
