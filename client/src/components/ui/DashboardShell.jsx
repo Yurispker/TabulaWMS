@@ -8,19 +8,23 @@ import {
   LogOut,
   Menu,
   X,
+  Users
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ProductsPage } from "@/components/ui/ProductsPage";
+import { CreateProductPage } from "@/components/ui/CreateProductPage";
 
 const NAV_ITEMS = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "products", label: "Products", icon: Package },
   { id: "orders", label: "Orders", icon: ShoppingCart },
+  { id: "users", label: "Manage Users", icon: Users}
 ];
 
 export function DashboardShell({ user, onLogout }) {
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [isCreatingProduct, setIsCreatingProduct] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -28,6 +32,7 @@ export function DashboardShell({ user, onLogout }) {
 
   const handleSelectNav = (id) => {
     setActiveTab(id);
+    setIsCreatingProduct(false);
     setMobileOpen(false);
   };
 
@@ -160,11 +165,11 @@ export function DashboardShell({ user, onLogout }) {
             <Menu className="size-5" aria-hidden="true" />
           </Button>
           <h1 className="text-xl font-semibold tracking-tight">
-            {activeItem?.label}
+            {isCreatingProduct ? "Create product" : activeItem?.label}
           </h1>
         </header>
 
-        <main className="flex-1 p-4 md:p-6">
+        <main className={cn("flex-1 p-4 md:p-6", activeTab === "products" && "flex flex-col")}>
           {activeTab === "dashboard" && (
             <div className="rounded-xl border border-border bg-card p-6 shadow-xs">
               <h2 className="text-lg font-medium">Warehouse Overview</h2>
@@ -176,7 +181,19 @@ export function DashboardShell({ user, onLogout }) {
           )}
 
           {activeTab === "products" && (
-            <ProductsPage user={user} />
+            <div className="mt-auto">
+              {isCreatingProduct ? (
+                <CreateProductPage
+                  user={user}
+                  onCancel={() => setIsCreatingProduct(false)}
+                />
+              ) : (
+                <ProductsPage
+                  user={user}
+                  onCreateProduct={() => setIsCreatingProduct(true)}
+                />
+              )}
+            </div>
           )}
 
           {activeTab === "orders" && (

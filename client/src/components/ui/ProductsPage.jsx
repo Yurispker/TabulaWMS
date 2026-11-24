@@ -4,7 +4,7 @@ import { apiClient } from "@/lib/api";
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
-export function ProductsPage({ user }) {
+export function ProductsPage({ user, onCreateProduct }) {
   const [products, setProducts] = useState([]);
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -71,6 +71,11 @@ export function ProductsPage({ user }) {
   }, [pageNumber, pageSize, user?.token]);
 
   return (
+    <>
+      <Button type="button" className="mb-4" onClick={onCreateProduct}>
+        Create new product
+      </Button>
+
     <section className="rounded-xl border border-border bg-card p-4 shadow-xs md:p-6">
       <h2 className="mb-4 text-lg font-medium">Products</h2>
       <div className="overflow-x-auto">
@@ -105,7 +110,7 @@ export function ProductsPage({ user }) {
               </tr>
             ) : (
               products.map((product) => (
-                <tr key={product.id} className="border-b border-border last:border-0">
+                <tr key={product.id} className="border-b border-border even:[&>td]:bg-muted/50 last:border-0">
                   <td className="px-3 py-3 font-medium">{product.sku}</td>
                   <td className="px-3 py-3">{product.name}</td>
                   <td className="max-w-xs truncate px-3 py-3 text-muted-foreground">
@@ -122,7 +127,7 @@ export function ProductsPage({ user }) {
         </table>
       </div>
 
-      <div className="mt-4 flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
         <label className="flex items-center gap-2 text-sm text-muted-foreground">
           Products per page
           <select
@@ -170,5 +175,6 @@ export function ProductsPage({ user }) {
         </div>
       </div>
     </section>
+    </>
   );
 }
