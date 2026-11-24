@@ -66,17 +66,14 @@ public class TokenService
             }
         }
 
-        // Create signing credentials using secret key
-        var creds = new SigningCredentials(_key, SecurityAlgorithms.HmacSha512Signature);
-
         // Describe the token properties
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
-            Expires = DateTime.UtcNow.AddMinutes(30), // Token expires in 30 minutes
+            Expires = DateTime.UtcNow.AddMinutes(10), // Token expires in 20 minutes
             Issuer = _config["JwtSettings:Issuer"],
             Audience = _config["JwtSettings:Audience"],
-            SigningCredentials = creds
+            SigningCredentials = new SigningCredentials(_key, SecurityAlgorithms.HmacSha512Signature)
         };
 
         // Generate the token
@@ -97,7 +94,8 @@ public class TokenService
             ValidIssuer = _config["JwtSettings:Issuer"],
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = _key, // Reuses existing private _key field
-            ValidateLifetime = false // Allows validation of expired tokens
+            ValidateLifetime = false, // Allows validation of expired tokens
+            ClockSkew = TimeSpan.Zero
         };
 
         var tokenHandler = new JwtSecurityTokenHandler();
