@@ -8,6 +8,7 @@ export function ProductsPage({ user, onCreateProduct }) {
   const [products, setProducts] = useState([]);
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [searchTerm, setSearchTerm] = useState("");
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
@@ -27,7 +28,7 @@ export function ProductsPage({ user, onCreateProduct }) {
 
       try {
         const response = await apiClient.get("/api/products", {
-          params: { pageNumber, pageSize },
+          params: { pageNumber, pageSize, searchTerm },
           headers: { Authorization: `Bearer ${user.token}` },
           signal: controller.signal,
         });
@@ -68,7 +69,7 @@ export function ProductsPage({ user, onCreateProduct }) {
 
     loadProducts();
     return () => controller.abort();
-  }, [pageNumber, pageSize, user?.token]);
+  }, [pageNumber, pageSize, searchTerm, user?.token]);
 
   return (
     <>
@@ -77,7 +78,22 @@ export function ProductsPage({ user, onCreateProduct }) {
       </Button>
 
     <section className="rounded-xl border border-border bg-card p-4 shadow-xs md:p-6">
-      <h2 className="mb-4 text-lg font-medium">Products</h2>
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="text-xl font-medium">Products</h2>
+        <div>
+          <input
+            type="search"
+            aria-label="Search products"
+            placeholder="Search Product(s)"
+            value={searchTerm}
+            onChange={(event) => {
+              setPageNumber(1);
+              setSearchTerm(event.target.value);
+            }}
+            className="h-9 w-full rounded-lg border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none sm:w-64"
+          />
+        </div>
+      </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[640px] text-left text-sm">
           <thead>
