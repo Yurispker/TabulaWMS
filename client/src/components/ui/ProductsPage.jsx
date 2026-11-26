@@ -3,15 +3,25 @@ import { Button } from "@/components/ui/button";
 import { apiClient } from "@/lib/api";
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+const SEARCH_DEBOUNCE_MS = 300;
 
 export function ProductsPage({ user, onCreateProduct }) {
   const [products, setProducts] = useState([]);
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [searchInput, setSearchInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setSearchTerm(searchInput.trim());
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchInput]);
 
   useEffect(() => {
     if (!user?.token) {
@@ -85,10 +95,10 @@ export function ProductsPage({ user, onCreateProduct }) {
             type="search"
             aria-label="Search products"
             placeholder="Search Product(s)"
-            value={searchTerm}
+            value={searchInput}
             onChange={(event) => {
               setPageNumber(1);
-              setSearchTerm(event.target.value);
+              setSearchInput(event.target.value);
             }}
             className="h-9 w-full rounded-lg border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none sm:w-64"
           />
