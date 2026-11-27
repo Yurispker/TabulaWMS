@@ -24,7 +24,10 @@ public class ProductsController : ControllerBase
     // GET /api/products
     [HttpGet]
     [Authorize(Policy = Permissions.ViewProducts)]
-    public async Task<IActionResult> GetProducts([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+    public async Task<IActionResult> GetProducts(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string? searchTerm = null)
     {
         try
         {
@@ -34,7 +37,10 @@ public class ProductsController : ControllerBase
             if (pageSize > 100) pageSize = 100; // Prevent massive memory dumps
 
             // Fetch paginated products and total count from service
-            var (products, totalCount) = await _productService.GetPagedProductsAsync(pageNumber, pageSize);
+            var (products, totalCount) = await _productService.GetPagedProductsAsync(
+                pageNumber,
+                pageSize,
+                searchTerm);
 
             return Ok(new
             {

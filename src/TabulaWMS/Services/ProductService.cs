@@ -56,9 +56,23 @@ public class ProductService : IProductService
         }
     }
 
-    public async Task<(IEnumerable<Product> Products, int TotalCount)> GetPagedProductsAsync(int pageNumber, int pageSize)
+    public async Task<(IEnumerable<Product> Products, int TotalCount)> GetPagedProductsAsync(
+        int pageNumber,
+        int pageSize,
+        string? searchTerm = null)
     {
         var query = _context.Products.AsNoTracking();
+
+
+        // Filter by SKU or Name
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var term = searchTerm.Trim();
+            query = query.Where(product =>
+                product.SKU.Contains(term) ||
+                product.Name.Contains(term) ||
+                (product.Description != null && product.Description.Contains(term)));
+        }
 
         var totalCount = await query.CountAsync();
 

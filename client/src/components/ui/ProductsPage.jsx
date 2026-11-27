@@ -116,7 +116,7 @@ export function ProductsPage({ user, onCreateProduct }) {
             </tr>
           </thead>
           <tbody>
-            {isLoading ? (
+            {isLoading && !searchTerm?.trim() ? (
               <tr>
                 <td colSpan={5} className="px-3 py-8 text-center text-muted-foreground">
                   Loading products...
