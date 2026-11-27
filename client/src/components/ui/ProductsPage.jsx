@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { apiClient } from "@/lib/api";
+import { LoaderCircle } from "lucide-react";
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 const SEARCH_DEBOUNCE_MS = 300;
@@ -11,13 +12,23 @@ export function ProductsPage({ user, onCreateProduct, onEditProduct }) {
   const [pageSize, setPageSize] = useState(10);
   const [searchInput, setSearchInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [isSearchPending, setIsSearchPending] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const latestSearchInputRef = useRef(searchInput);
+  const searchTermRef = useRef(searchTerm);
 
   useEffect(() => {
+    const nextTerm = searchInput.trim();
     const timeoutId = setTimeout(() => {
-      setSearchTerm(searchInput.trim());
+      if (nextTerm === searchTermRef.current) {
+        setIsSearchPending(false);
+        return;
+      }
+
+      searchTermRef.current = nextTerm;
+      setSearchTerm(nextTerm);
     }, SEARCH_DEBOUNCE_MS);
 
     return () => clearTimeout(timeoutId);
@@ -27,6 +38,7 @@ export function ProductsPage({ user, onCreateProduct, onEditProduct }) {
     if (!user?.token) {
       setErrorMessage("Your session token is missing. Please sign in again.");
       setIsLoading(false);
+      setIsSearchPending(false);
       return;
     }
 
@@ -73,6 +85,9 @@ export function ProductsPage({ user, onCreateProduct, onEditProduct }) {
       } finally {
         if (!controller.signal.aborted) {
           setIsLoading(false);
+          if (latestSearchInputRef.current.trim() === searchTerm) {
+            setIsSearchPending(false);
+          }
         }
       }
     };
@@ -83,27 +98,42 @@ export function ProductsPage({ user, onCreateProduct, onEditProduct }) {
 
   return (
     <>
+      {/* Product creation action */}
       <Button type="button" className="mb-4" onClick={onCreateProduct}>
         Create new product
       </Button>
 
     <section className="rounded-xl border border-border bg-card p-4 shadow-xs md:p-6">
+      {/* Products heading and search */}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-xl font-medium">Products</h2>
-        <div>
+        <div className="relative w-full sm:w-64">
           <input
             type="search"
             aria-label="Search products"
             placeholder="Search Product(s)"
             value={searchInput}
             onChange={(event) => {
+              const nextInput = event.target.value;
+              latestSearchInputRef.current = nextInput;
+              setIsSearchPending(true);
               setPageNumber(1);
-              setSearchInput(event.target.value);
+              setSearchInput(nextInput);
             }}
-            className="h-9 w-full rounded-lg border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none sm:w-64"
+            className="h-9 w-full rounded-lg border border-input bg-background px-3 pr-10 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
           />
+          {(isSearchPending || isLoading) && (
+            <span
+              role="status"
+              aria-label="Loading products"
+              className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground"
+            >
+              <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+            </span>
+          )}
         </div>
       </div>
+      {/* Product results */}
       <div className="overflow-x-auto">
         <table className="w-full min-w-[720px] text-left text-sm">
           <thead>
@@ -162,6 +192,7 @@ export function ProductsPage({ user, onCreateProduct, onEditProduct }) {
         </table>
       </div>
 
+      {/* Product pagination */}
       <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
         <label className="flex items-center gap-2 text-sm text-muted-foreground">
           Products per page
