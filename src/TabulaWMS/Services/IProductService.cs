@@ -10,4 +10,5 @@ public interface IProductService
         int pageSize,
         string? searchTerm = null);
     Task<ProductDto?> GetProductBySkuAsync(string sku);
+    Task<Product?> UpdateProductAsync(string sku, UpdateProductDto dto);
 }

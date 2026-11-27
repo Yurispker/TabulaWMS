@@ -7,3 +7,13 @@ Content-Type: application/json
   "sku": "TSHIRT-BLK-001",
   "location": "Warehouse Sector A"
 }
+
+###
+PUT http://localhost:5063/api/products/TSHIRT-BLK-001
+Content-Type: application/json
+
+{
+  "name": "Black T-shirt - Updated",
+  "price": 19.99,
+  "description": "Updated product description"
+}

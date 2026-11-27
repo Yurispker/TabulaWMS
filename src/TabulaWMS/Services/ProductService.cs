@@ -104,4 +104,59 @@ public class ProductService : IProductService
             })
             .FirstOrDefaultAsync();
     }
+
+    public async Task<Product?> UpdateProductAsync(string sku, UpdateProductDto dto)
+    {
+        var product = await _context.Products
+            .FirstOrDefaultAsync(p => p.SKU == sku.Trim());
+
+        if (product == null)
+        {
+            return null;
+        }
+
+        if (dto.SKU != null)
+        {
+            var updatedSku = dto.SKU.Trim();
+            var skuInUse = await _context.Products
+                .AnyAsync(p => p.Id != product.Id && p.SKU == updatedSku);
+
+            if (skuInUse)
+            {
+                throw new InvalidOperationException($"A product with SKU '{updatedSku}' already exists.");
+            }
+
+            product.SKU = updatedSku;
+        }
+
+        if (dto.Name != null)
+        {
+            product.Name = dto.Name.Trim();
+        }
+
+        if (dto.Quantity.HasValue)
+        {
+            product.Quantity = dto.Quantity.Value;
+        }
+
+        if (dto.DescriptionSpecified)
+        {
+            product.Description = dto.Description;
+        }
+
+        if (dto.LocationSpecified)
+        {
+            product.Location = dto.Location;
+        }
+
+        if (dto.Price.HasValue)
+        {
+            product.Price = dto.Price.Value;
+        }
+
+        product.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        return product;
+    }
 }
