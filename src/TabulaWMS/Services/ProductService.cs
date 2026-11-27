@@ -45,6 +45,7 @@ public class ProductService : IProductService
         else
         {
             // PRODUCT ALREADY EXISTS: Safe Metadata Sync (but protect physical stock quantity)
+            existingProduct.IsDeleted = false;
             existingProduct.Name = dto.Name;
             existingProduct.Description = dto.Description;
             existingProduct.Price = dto.Price;
@@ -56,9 +57,25 @@ public class ProductService : IProductService
         }
     }
 
-    public async Task<(IEnumerable<Product> Products, int TotalCount)> GetPagedProductsAsync(int pageNumber, int pageSize)
+    public async Task<(IEnumerable<Product> Products, int TotalCount)> GetPagedProductsAsync(
+        int pageNumber,
+        int pageSize,
+        string? searchTerm = null)
     {
-        var query = _context.Products.AsNoTracking();
+        var query = _context.Products
+            .AsNoTracking()
+            .Where(product => !product.IsDeleted);
+
+
+        // Filter by SKU or Name
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var term = searchTerm.Trim();
+            query = query.Where(product =>
+                product.SKU.Contains(term) ||
+                product.Name.Contains(term) ||
+                (product.Description != null && product.Description.Contains(term)));
+        }
 
         var totalCount = await query.CountAsync();
 
@@ -80,7 +97,7 @@ public class ProductService : IProductService
 
         return await _context.Products
             .AsNoTracking()
-            .Where(p => p.SKU == sanitizedSku)
+            .Where(p => p.SKU == sanitizedSku && !p.IsDeleted)
             .Select(p => new ProductDto 
             { 
                 SKU = p.SKU,
@@ -89,5 +106,83 @@ public class ProductService : IProductService
                 Quantity = p.Quantity 
             })
             .FirstOrDefaultAsync();
+    }
+
+    public async Task<Product?> UpdateProductAsync(string sku, UpdateProductDto dto)
+    {
+        var product = await _context.Products
+            .FirstOrDefaultAsync(p => p.SKU == sku.Trim() && !p.IsDeleted);
+
+        if (product == null)
+        {
+            return null;
+        }
+
+        if (dto.SKU != null)
+        {
+            var updatedSku = dto.SKU.Trim();
+            var skuInUse = await _context.Products
+                .AnyAsync(p => p.Id != product.Id && p.SKU == updatedSku);
+
+            if (skuInUse)
+            {
+                throw new InvalidOperationException($"A product with SKU '{updatedSku}' already exists.");
+            }
+
+            product.SKU = updatedSku;
+        }
+
+        if (dto.Name != null)
+        {
+            product.Name = dto.Name.Trim();
+        }
+
+        if (dto.Quantity.HasValue)
+        {
+            product.Quantity = dto.Quantity.Value;
+        }
+
+        if (dto.DescriptionSpecified)
+        {
+            product.Description = dto.Description;
+        }
+
+        if (dto.LocationSpecified)
+        {
+            product.Location = dto.Location;
+        }
+
+        if (dto.Price.HasValue)
+        {
+            product.Price = dto.Price.Value;
+        }
+
+        product.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        return product;
+    }
+
+    public async Task<ProductDeletionResult> DeleteProductAsync(string sku)
+    {
+        var sanitizedSku = sku.Trim();
+        var product = await _context.Products
+            .FirstOrDefaultAsync(p => p.SKU == sanitizedSku);
+
+        if (product == null)
+        {
+            return ProductDeletionResult.NotFound;
+        }
+
+        if (product.IsDeleted)
+        {
+            return ProductDeletionResult.AlreadyDeleted;
+        }
+
+        product.IsDeleted = true;
+        product.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        return ProductDeletionResult.Deleted;
     }
 }

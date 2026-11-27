@@ -116,7 +116,7 @@ public class AuthController : ControllerBase
 
         var refreshToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
         user.RefreshToken = refreshToken;
-        user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
+        user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(20);
 
         // Save refresh token to database
         await _userManager.UpdateAsync(user);
@@ -173,7 +173,7 @@ public class AuthController : ControllerBase
         var newRefreshToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
 
         user.RefreshToken = newRefreshToken;
-        user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
+        user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(20);
         await _userManager.UpdateAsync(user);
 
         return Ok(new

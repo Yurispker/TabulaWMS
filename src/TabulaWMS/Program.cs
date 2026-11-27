@@ -8,18 +8,24 @@ using TabulaWMS.Services;
 using TabulaWMS.Models;
 using TabulaWMS.Data;
 using TabulaWMS.Middleware;
+using TabulaWMS.Constants;
 using Scalar.AspNetCore;
 using Microsoft.OpenApi;
 
 
 
-var builder = WebApplication.CreateBuilder(args);
+var runTenantMigrations = args.Contains("--migrate-tenants", StringComparer.OrdinalIgnoreCase);
+var builderArgs = args
+    .Where(argument => !string.Equals(argument, "--migrate-tenants", StringComparison.OrdinalIgnoreCase))
+    .ToArray();
+var builder = WebApplication.CreateBuilder(builderArgs);
 
 builder.Services.AddControllers();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ITenantProvisioningService, TenantProvisioningService>();
 builder.Services.AddScoped<ITenantService, TenantService>();
+builder.Services.AddScoped<TenantMigrationRunner>();
 
 builder.Services.AddScoped<IProductService, ProductService>();
 
@@ -112,8 +118,18 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
         ValidAudience = builder.Configuration["JwtSettings:Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey!))
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey!)),
+        ClockSkew = TimeSpan.Zero
     };
+});
+
+builder.Services.AddAuthorization(options =>
+{
+    foreach (var permission in Permissions.GetAllPermissions())
+    {
+        options.AddPolicy(permission, policy =>
+            policy.RequireAuthenticatedUser().RequireClaim("permission", permission));
+    }
 });
 
 // 1. Add rate limiting services
@@ -139,6 +155,14 @@ builder.Services.AddRateLimiter(options =>
 });
 
 var app = builder.Build();
+
+if (runTenantMigrations)
+{
+    using var scope = app.Services.CreateScope();
+    var migrationRunner = scope.ServiceProvider.GetRequiredService<TenantMigrationRunner>();
+    Environment.ExitCode = await migrationRunner.RunAsync();
+    return;
+}
 
 // seed SuperAdmin user on startup
 using (var scope = app.Services.CreateScope())

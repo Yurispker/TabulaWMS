@@ -9,7 +9,7 @@ public class ProductDto
     public string SKU { get; set; } = string.Empty;
 
     [Required]
-    [StringLength(150, ErrorMessage = "Name cannot be longer than 50 characters.")]
+    [StringLength(150, ErrorMessage = "Name cannot be longer than 150 characters.")]
     public string Name { get; set; } = string.Empty;
 
     public string? Description { get; set; }

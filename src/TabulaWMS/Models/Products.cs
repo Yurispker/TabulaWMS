@@ -31,5 +31,7 @@ namespace TabulaWMS.Models
 
         [Range(0.0, double.MaxValue, ErrorMessage = "Price must be greater than or equal to 0.")]
         public decimal Price { get; set; } = 0.0m;
+
+        public bool IsDeleted { get; set; } = false;
     }
 }

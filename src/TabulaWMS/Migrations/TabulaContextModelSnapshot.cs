@@ -168,6 +168,11 @@ namespace TabulaWMS.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
+                    b.Property<bool>("IsDeleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<string>("Location")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
