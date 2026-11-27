@@ -50,6 +50,7 @@ public class TabulaContext : IdentityDbContext<User, IdentityRole, string>
         {
             entity.HasKey(p => p.Id);
             entity.Property(p => p.SKU).IsRequired();
+            entity.Property(p => p.IsDeleted).HasDefaultValue(false);
             entity.HasIndex(p => p.SKU).IsUnique(); // Duplicate SKUs are blocked
         });
 

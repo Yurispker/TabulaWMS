@@ -14,13 +14,18 @@ using Microsoft.OpenApi;
 
 
 
-var builder = WebApplication.CreateBuilder(args);
+var runTenantMigrations = args.Contains("--migrate-tenants", StringComparer.OrdinalIgnoreCase);
+var builderArgs = args
+    .Where(argument => !string.Equals(argument, "--migrate-tenants", StringComparison.OrdinalIgnoreCase))
+    .ToArray();
+var builder = WebApplication.CreateBuilder(builderArgs);
 
 builder.Services.AddControllers();
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ITenantProvisioningService, TenantProvisioningService>();
 builder.Services.AddScoped<ITenantService, TenantService>();
+builder.Services.AddScoped<TenantMigrationRunner>();
 
 builder.Services.AddScoped<IProductService, ProductService>();
 
@@ -150,6 +155,14 @@ builder.Services.AddRateLimiter(options =>
 });
 
 var app = builder.Build();
+
+if (runTenantMigrations)
+{
+    using var scope = app.Services.CreateScope();
+    var migrationRunner = scope.ServiceProvider.GetRequiredService<TenantMigrationRunner>();
+    Environment.ExitCode = await migrationRunner.RunAsync();
+    return;
+}
 
 // seed SuperAdmin user on startup
 using (var scope = app.Services.CreateScope())

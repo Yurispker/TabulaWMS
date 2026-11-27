@@ -168,4 +168,38 @@ public class ProductsController : ControllerBase
             return StatusCode(500, new { Error = "An internal error occurred while updating the product." });
         }
     }
+
+    [HttpDelete("{sku}")]
+    [Authorize(Policy = Permissions.DeleteProducts)]
+    public async Task<IActionResult> DeleteProduct(string sku)
+    {
+        if (string.IsNullOrWhiteSpace(sku))
+        {
+            return BadRequest(new { Error = "SKU parameter is required." });
+        }
+
+        try
+        {
+            var result = await _productService.DeleteProductAsync(sku);
+
+            return result switch
+            {
+                ProductDeletionResult.Deleted => NoContent(),
+                ProductDeletionResult.NotFound =>
+                    NotFound(new { Error = $"Product with SKU '{sku.Trim()}' was not found." }),
+                ProductDeletionResult.AlreadyDeleted =>
+                    StatusCode(StatusCodes.Status410Gone, new
+                    {
+                        Error = $"Product with SKU '{sku.Trim()}' has already been deleted."
+                    }),
+                _ => StatusCode(StatusCodes.Status500InternalServerError,
+                    new { Error = "An unexpected product deletion result was returned." })
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting product with SKU {Sku}", sku);
+            return StatusCode(500, new { Error = "An internal error occurred while deleting the product." });
+        }
+    }
 }

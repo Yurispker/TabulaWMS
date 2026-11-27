@@ -15,6 +15,7 @@ public static class Permissions
     public const string ViewProducts = "products:view";
     public const string CreateProducts = "products:create";
     public const string UpdateProducts = "products:update";
+    public const string DeleteProducts = "products:delete";
 
     public const string ViewInventory = "inventory:view";
     public const string AdjustInventory = "inventory:adjust";
@@ -33,6 +34,7 @@ public static class Permissions
             ViewProducts,
             CreateProducts,
             UpdateProducts,
+            DeleteProducts,
             ViewInventory,
             AdjustInventory,
             ViewOrders,

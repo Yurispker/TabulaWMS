@@ -45,6 +45,7 @@ public class ProductService : IProductService
         else
         {
             // PRODUCT ALREADY EXISTS: Safe Metadata Sync (but protect physical stock quantity)
+            existingProduct.IsDeleted = false;
             existingProduct.Name = dto.Name;
             existingProduct.Description = dto.Description;
             existingProduct.Price = dto.Price;
@@ -61,7 +62,9 @@ public class ProductService : IProductService
         int pageSize,
         string? searchTerm = null)
     {
-        var query = _context.Products.AsNoTracking();
+        var query = _context.Products
+            .AsNoTracking()
+            .Where(product => !product.IsDeleted);
 
 
         // Filter by SKU or Name
@@ -94,7 +97,7 @@ public class ProductService : IProductService
 
         return await _context.Products
             .AsNoTracking()
-            .Where(p => p.SKU == sanitizedSku)
+            .Where(p => p.SKU == sanitizedSku && !p.IsDeleted)
             .Select(p => new ProductDto 
             { 
                 SKU = p.SKU,
@@ -108,7 +111,7 @@ public class ProductService : IProductService
     public async Task<Product?> UpdateProductAsync(string sku, UpdateProductDto dto)
     {
         var product = await _context.Products
-            .FirstOrDefaultAsync(p => p.SKU == sku.Trim());
+            .FirstOrDefaultAsync(p => p.SKU == sku.Trim() && !p.IsDeleted);
 
         if (product == null)
         {
@@ -158,5 +161,28 @@ public class ProductService : IProductService
         await _context.SaveChangesAsync();
 
         return product;
+    }
+
+    public async Task<ProductDeletionResult> DeleteProductAsync(string sku)
+    {
+        var sanitizedSku = sku.Trim();
+        var product = await _context.Products
+            .FirstOrDefaultAsync(p => p.SKU == sanitizedSku);
+
+        if (product == null)
+        {
+            return ProductDeletionResult.NotFound;
+        }
+
+        if (product.IsDeleted)
+        {
+            return ProductDeletionResult.AlreadyDeleted;
+        }
+
+        product.IsDeleted = true;
+        product.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        return ProductDeletionResult.Deleted;
     }
 }
