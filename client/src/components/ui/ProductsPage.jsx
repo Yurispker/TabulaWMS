@@ -16,6 +16,10 @@ export function ProductsPage({ user, onCreateProduct, onEditProduct }) {
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [deleteErrorMessage, setDeleteErrorMessage] = useState("");
+  const [deleteStatusMessage, setDeleteStatusMessage] = useState("");
+  const [deletingSku, setDeletingSku] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
   const latestSearchInputRef = useRef(searchInput);
   const searchTermRef = useRef(searchTerm);
 
@@ -94,7 +98,66 @@ export function ProductsPage({ user, onCreateProduct, onEditProduct }) {
 
     loadProducts();
     return () => controller.abort();
-  }, [pageNumber, pageSize, searchTerm, user?.token]);
+  }, [pageNumber, pageSize, refreshKey, searchTerm, user?.token]);
+
+  const handleDeleteProduct = async (product) => {
+    if (!user?.token) {
+      setDeleteErrorMessage("Your session token is missing. Please sign in again.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete product ${product.sku}?`
+    );
+    if (!confirmed) return;
+
+    setDeletingSku(product.sku);
+    setDeleteErrorMessage("");
+    setDeleteStatusMessage("");
+
+    let wasDeleted = false;
+
+    try {
+      await apiClient.delete(`/api/products/${encodeURIComponent(product.sku)}`, {
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
+      wasDeleted = true;
+    } catch (error) {
+      const responseData = error.response?.data;
+      const responseMessage =
+        typeof responseData === "string"
+          ? responseData
+          : responseData?.message || responseData?.error || responseData?.Error;
+
+      if (error.response?.status === 401) {
+        setDeleteErrorMessage("Your session has expired. Please sign in again.");
+      } else if (error.response?.status === 403) {
+        setDeleteErrorMessage("You do not have permission to delete products.");
+      } else if (error.response?.status === 404) {
+        setDeleteErrorMessage("This product no longer exists.");
+        setRefreshKey((current) => current + 1);
+      } else if (error.response?.status === 410) {
+        setDeleteErrorMessage("This product has already been deleted.");
+        setRefreshKey((current) => current + 1);
+      } else if (responseMessage) {
+        setDeleteErrorMessage(responseMessage);
+      } else if (error.request) {
+        setDeleteErrorMessage("Could not reach the server while deleting the product.");
+      } else {
+        setDeleteErrorMessage(error.message || "Could not delete the product.");
+      }
+    } finally {
+      setDeletingSku("");
+    }
+
+    if (wasDeleted) {
+      setDeleteStatusMessage(`Product ${product.sku} deleted.`);
+      if (products.length === 1 && pageNumber > 1) {
+        setPageNumber((current) => current - 1);
+      }
+      setRefreshKey((current) => current + 1);
+    }
+  };
 
   return (
     <>
@@ -133,6 +196,16 @@ export function ProductsPage({ user, onCreateProduct, onEditProduct }) {
           )}
         </div>
       </div>
+      {deleteErrorMessage && (
+        <p role="alert" className="mb-3 text-sm text-destructive">
+          {deleteErrorMessage}
+        </p>
+      )}
+      {deleteStatusMessage && (
+        <p role="status" className="mb-3 text-sm text-muted-foreground">
+          {deleteStatusMessage}
+        </p>
+      )}
       {/* Product results */}
       <div className="overflow-x-auto">
         <table className="w-full min-w-[720px] text-left text-sm">
@@ -178,12 +251,23 @@ export function ProductsPage({ user, onCreateProduct, onEditProduct }) {
                     {Number(product.price).toFixed(2)}
                   </td>
                   <td className="px-3 py-3 text-right">
-                    <Button
-                      type="button"
-                      onClick={() => onEditProduct(product)}
-                    >
-                      Edit
-                    </Button>
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        type="button"
+                        disabled={Boolean(deletingSku) || isLoading}
+                        onClick={() => onEditProduct(product)}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        disabled={Boolean(deletingSku) || isLoading}
+                        onClick={() => handleDeleteProduct(product)}
+                      >
+                        {deletingSku === product.sku ? "Deleting..." : "Delete"}
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))

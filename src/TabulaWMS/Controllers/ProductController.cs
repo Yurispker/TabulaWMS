@@ -169,6 +169,7 @@ public class ProductsController : ControllerBase
         }
     }
 
+    // DELETE api/products/sku
     [HttpDelete("{sku}")]
     [Authorize(Policy = Permissions.DeleteProducts)]
     public async Task<IActionResult> DeleteProduct(string sku)
