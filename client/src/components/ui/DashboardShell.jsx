@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ProductsPage } from "@/components/ui/ProductsPage";
 import { CreateProductPage } from "@/components/ui/CreateProductPage";
+import { EditProductPage } from "@/components/ui/EditProductPage";
 
 const NAV_ITEMS = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -25,6 +26,7 @@ const NAV_ITEMS = [
 export function DashboardShell({ user, onLogout }) {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isCreatingProduct, setIsCreatingProduct] = useState(false);
+  const [productToEdit, setProductToEdit] = useState(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [successNotice, setSuccessNotice] = useState();
@@ -42,6 +44,7 @@ export function DashboardShell({ user, onLogout }) {
   const handleSelectNav = (id) => {
     setActiveTab(id);
     setIsCreatingProduct(false);
+    setProductToEdit(null);
     setMobileOpen(false);
   };
 
@@ -174,7 +177,11 @@ export function DashboardShell({ user, onLogout }) {
             <Menu className="size-5" aria-hidden="true" />
           </Button>
           <h1 className="text-xl font-semibold tracking-tight">
-            {isCreatingProduct ? "Create product" : activeItem?.label}
+            {isCreatingProduct
+              ? "Create product"
+              : productToEdit
+                ? "Edit product"
+                : activeItem?.label}
           </h1>
         </header>
 
@@ -201,10 +208,22 @@ export function DashboardShell({ user, onLogout }) {
                     setSuccessNotice({ message: `Product ${sku} created successfully.` });
                   }}
                 />
+              ) : productToEdit ? (
+                <EditProductPage
+                  user={user}
+                  product={productToEdit}
+                  onCancel={() => setProductToEdit(null)}
+                  onUpdated={(sku) => {
+                    setProductToEdit(null);
+                    setActiveTab("products");
+                    setSuccessNotice({ message: `Product ${sku} updated successfully.` });
+                  }}
+                />
               ) : (
                 <ProductsPage
                   user={user}
                   onCreateProduct={() => setIsCreatingProduct(true)}
+                  onEditProduct={setProductToEdit}
                 />
               )}
             </div>

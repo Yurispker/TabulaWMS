@@ -5,7 +5,7 @@ import { apiClient } from "@/lib/api";
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 const SEARCH_DEBOUNCE_MS = 300;
 
-export function ProductsPage({ user, onCreateProduct }) {
+export function ProductsPage({ user, onCreateProduct, onEditProduct }) {
   const [products, setProducts] = useState([]);
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -105,7 +105,7 @@ export function ProductsPage({ user, onCreateProduct }) {
         </div>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[640px] text-left text-sm">
+        <table className="w-full min-w-[720px] text-left text-sm">
           <thead>
             <tr className="border-b border-border text-muted-foreground">
               <th scope="col" className="px-3 py-2 font-medium">SKU</th>
@@ -113,24 +113,25 @@ export function ProductsPage({ user, onCreateProduct }) {
               <th scope="col" className="px-3 py-2 font-medium">Description</th>
               <th scope="col" className="px-3 py-2 text-right font-medium">Quantity</th>
               <th scope="col" className="px-3 py-2 text-right font-medium">Price</th>
+              <th scope="col" className="px-3 py-2 text-right font-medium">Actions</th>
             </tr>
           </thead>
           <tbody>
             {isLoading && !searchTerm?.trim() ? (
               <tr>
-                <td colSpan={5} className="px-3 py-8 text-center text-muted-foreground">
+                <td colSpan={6} className="px-3 py-8 text-center text-muted-foreground">
                   Loading products...
                 </td>
               </tr>
             ) : errorMessage ? (
               <tr>
-                <td colSpan={5} role="alert" className="px-3 py-8 text-center text-destructive">
+                <td colSpan={6} role="alert" className="px-3 py-8 text-center text-destructive">
                   {errorMessage}
                 </td>
               </tr>
             ) : products.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-3 py-8 text-center text-muted-foreground">
+                <td colSpan={6} className="px-3 py-8 text-center text-muted-foreground">
                   No products found.
                 </td>
               </tr>
@@ -145,6 +146,14 @@ export function ProductsPage({ user, onCreateProduct }) {
                   <td className="px-3 py-3 text-right">{product.quantity}</td>
                   <td className="px-3 py-3 text-right">
                     {Number(product.price).toFixed(2)}
+                  </td>
+                  <td className="px-3 py-3 text-right">
+                    <Button
+                      type="button"
+                      onClick={() => onEditProduct(product)}
+                    >
+                      Edit
+                    </Button>
                   </td>
                 </tr>
               ))
